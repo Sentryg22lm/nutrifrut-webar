@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
+
   <meta charset="UTF-8">
 
   <meta
@@ -9,22 +9,71 @@
     content="width=device-width, initial-scale=1.0, user-scalable=no"
   >
 
-  <!-- A-FRAME -->
+  <!-- A-FRAME recomendado por MindAR -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
 
-  <!-- MINDAR -->
+  <!-- MindAR -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
 
-    html,
-    body {
+    html, body {
       margin: 0;
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: #000;
       font-family: Arial, sans-serif;
+    }
+
+    #startScreen {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+
+      background: #111;
+
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+
+      color: white;
+      text-align: center;
+    }
+
+    #startButton {
+      border: 0;
+      border-radius: 40px;
+
+      padding: 18px 30px;
+
+      background: #00c853;
+      color: white;
+
+      font-size: 18px;
+      font-weight: bold;
+
+      margin-top: 20px;
+    }
+
+    #status {
+      position: fixed;
+
+      top: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+
+      z-index: 9999;
+
+      background: rgba(0,0,0,.75);
+      color: white;
+
+      padding: 12px 20px;
+      border-radius: 30px;
+
+      font-size: 15px;
+
+      display: none;
     }
 
     .a-enter-vr,
@@ -32,79 +81,51 @@
       display: none !important;
     }
 
-    #hud {
-      position: fixed;
-      top: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-
-      z-index: 99999;
-
-      width: 80%;
-      max-width: 340px;
-
-      padding: 14px 18px;
-
-      border-radius: 24px;
-
-      background: rgba(0, 0, 0, 0.75);
-      color: white;
-
-      text-align: center;
-
-      pointer-events: none;
-    }
-
-    #score {
-      font-size: 22px;
-      font-weight: bold;
-    }
-
-    #status {
-      font-size: 14px;
-      margin-top: 5px;
-    }
-
   </style>
-</head>
 
+</head>
 
 <body>
 
-  <!-- INTERFAZ -->
 
-  <div id="hud">
+  <!-- PANTALLA INICIAL -->
 
-    <div id="score">
-      ENERGÍA: 0
-    </div>
+  <div id="startScreen">
 
-    <div id="status">
-      Iniciando cámara...
-    </div>
+    <h1>NUTRIFRUT</h1>
+
+    <p>
+      Activá la cámara para comenzar
+    </p>
+
+    <button id="startButton">
+      INICIAR EXPERIENCIA
+    </button>
 
   </div>
 
 
-  <!-- REALIDAD AUMENTADA -->
+  <!-- ESTADO -->
+
+  <div id="status">
+    Iniciando...
+  </div>
+
+
+  <!-- ESCENA -->
 
   <a-scene
 
     mindar-image="
       imageTargetSrc: ./target/targets.mind;
-      uiScanning: no;
-      uiLoading: no;
-      uiError: no;
+      autoStart: false;
     "
-
-    embedded
 
     color-space="sRGB"
 
     renderer="
       colorManagement: true;
-      physicallyCorrectLights;
-      alpha: true;
+      physicallyCorrectLights
     "
 
     vr-mode-ui="enabled: false"
@@ -117,212 +138,183 @@
     <!-- CÁMARA -->
 
     <a-camera
-
       position="0 0 0"
-
       look-controls="enabled: false"
-
-      cursor="
-        fuse: false;
-        rayOrigin: mouse;
-      "
-
-      raycaster="
-        far: 10000;
-        objects: .clickable;
-      "
-
     >
     </a-camera>
 
 
-    <!-- MARCADOR -->
+    <!-- TARGET -->
 
     <a-entity
       id="target"
       mindar-image-target="targetIndex: 0"
     >
 
+      <!-- PRUEBA VERDE -->
 
-      <!-- CÍRCULO IZQUIERDO -->
+      <a-plane
 
-      <a-circle
-        class="clickable"
-        position="-0.32 0.12 0.1"
-        radius="0.15"
-        color="#FF9800"
+        color="#00ff00"
+
+        width="0.6"
+        height="0.3"
+
+        position="0 0 0.1"
+
       >
-      </a-circle>
-
-
-      <!-- CÍRCULO CENTRAL -->
-
-      <a-circle
-        class="clickable"
-        position="0 0.35 0.1"
-        radius="0.15"
-        color="#00C853"
-      >
-      </a-circle>
-
-
-      <!-- CÍRCULO DERECHO -->
-
-      <a-circle
-        class="clickable"
-        position="0.32 0.12 0.1"
-        radius="0.15"
-        color="#FF5722"
-      >
-      </a-circle>
-
+      </a-plane>
 
     </a-entity>
+
 
   </a-scene>
 
 
   <script>
 
-    document.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener(
+      "DOMContentLoaded",
+      function () {
 
-      let score = 0;
+        const scene =
+          document.querySelector("a-scene");
 
-      let targetVisible = false;
+        const startScreen =
+          document.getElementById("startScreen");
 
+        const startButton =
+          document.getElementById("startButton");
 
-      const scoreElement =
-        document.getElementById("score");
+        const status =
+          document.getElementById("status");
 
-      const statusElement =
-        document.getElementById("status");
-
-      const scene =
-        document.querySelector("a-scene");
-
-      const target =
-        document.getElementById("target");
-
-      const objects =
-        document.querySelectorAll(".clickable");
+        const target =
+          document.getElementById("target");
 
 
-      // ------------------------------------
-      // CÁMARA LISTA
-      // ------------------------------------
-
-      scene.addEventListener("arReady", function () {
-
-        statusElement.textContent =
-          "Apuntá al afiche";
-
-      });
+        let arSystem = null;
 
 
-      // ------------------------------------
-      // ERROR DE CÁMARA
-      // ------------------------------------
+        // Esperamos a que A-Frame termine de cargar
+        scene.addEventListener(
+          "loaded",
+          function () {
 
-      scene.addEventListener("arError", function () {
-
-        statusElement.textContent =
-          "No se pudo iniciar la cámara";
-
-      });
-
-
-      // ------------------------------------
-      // MARCADOR ENCONTRADO
-      // ------------------------------------
-
-      target.addEventListener(
-        "targetFound",
-        function () {
-
-          targetVisible = true;
-
-          statusElement.textContent =
-            "¡Detectado! Tocá los círculos";
-
-        }
-      );
-
-
-      // ------------------------------------
-      // MARCADOR PERDIDO
-      // ------------------------------------
-
-      target.addEventListener(
-        "targetLost",
-        function () {
-
-          targetVisible = false;
-
-          statusElement.textContent =
-            "Volvé a apuntar al afiche";
-
-        }
-      );
-
-
-      // ------------------------------------
-      // TOCAR LOS OBJETOS
-      // ------------------------------------
-
-      objects.forEach(function (object) {
-
-        object.addEventListener(
-          "click",
-          function (event) {
-
-            // Si no estamos viendo el afiche,
-            // NO sumar puntos.
-
-            if (!targetVisible) {
-              return;
-            }
-
-
-            event.stopPropagation();
-
-
-            // SUMAR
-
-            score += 100;
-
-
-            scoreElement.textContent =
-              "ENERGÍA: " + score;
-
-
-            // AGRANDAR
-
-            object.setAttribute(
-              "scale",
-              "1.4 1.4 1.4"
-            );
-
-
-            // VOLVER AL TAMAÑO NORMAL
-
-            setTimeout(function () {
-
-              object.setAttribute(
-                "scale",
-                "1 1 1"
-              );
-
-            }, 150);
+            arSystem =
+              scene.systems["mindar-image-system"];
 
           }
         );
 
-      });
 
-    });
+        // BOTÓN INICIAR
+
+        startButton.addEventListener(
+          "click",
+          async function () {
+
+            if (!arSystem) {
+
+              status.style.display = "block";
+
+              status.textContent =
+                "Esperá un momento...";
+
+              return;
+
+            }
+
+
+            startButton.disabled = true;
+
+            startButton.textContent =
+              "ABRIENDO CÁMARA...";
+
+
+            try {
+
+              await arSystem.start();
+
+            }
+
+            catch (error) {
+
+              console.error(error);
+
+              startButton.disabled = false;
+
+              startButton.textContent =
+                "INTENTAR DE NUEVO";
+
+            }
+
+          }
+        );
+
+
+        // CÁMARA FUNCIONANDO
+
+        scene.addEventListener(
+          "arReady",
+          function () {
+
+            startScreen.style.display = "none";
+
+            status.style.display = "block";
+
+            status.textContent =
+              "Apuntá al afiche";
+
+          }
+        );
+
+
+        // ERROR
+
+        scene.addEventListener(
+          "arError",
+          function () {
+
+            startButton.disabled = false;
+
+            startButton.textContent =
+              "INTENTAR DE NUEVO";
+
+          }
+        );
+
+
+        // TARGET DETECTADO
+
+        target.addEventListener(
+          "targetFound",
+          function () {
+
+            status.textContent =
+              "AFICHE DETECTADO";
+
+          }
+        );
+
+
+        // TARGET PERDIDO
+
+        target.addEventListener(
+          "targetLost",
+          function () {
+
+            status.textContent =
+              "Apuntá nuevamente al afiche";
+
+          }
+        );
+
+      }
+    );
 
   </script>
 
-</body>
 
+</body>
 </html>
