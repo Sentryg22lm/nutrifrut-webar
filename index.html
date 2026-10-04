@@ -5,7 +5,7 @@
   <meta name="viewport"
         content="width=device-width, initial-scale=1, viewport-fit=cover">
 
-  <title>Nutrifrut | Fase 5 | NF-5.1</title>
+  <title>Nutrifrut | Fase 7 | NF-7.1</title>
 
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -100,6 +100,51 @@
     .game-object.collected { transform: scale(1.2); opacity: 0; }
     .game-object:focus-visible { outline: 3px solid #ffe45c; outline-offset: 3px; }
     [hidden] { display: none !important; }
+    #resultLayer {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      box-sizing: border-box;
+      padding: max(20px, env(safe-area-inset-top))
+        max(20px, env(safe-area-inset-right))
+        max(20px, env(safe-area-inset-bottom))
+        max(20px, env(safe-area-inset-left));
+      display: grid;
+      place-items: center;
+      background: rgba(0, 0, 0, 0.35);
+    }
+
+    .result-card {
+      box-sizing: border-box;
+      width: min(420px, 100%);
+      max-height: 100%;
+      overflow: auto;
+      padding: 28px 22px;
+      border-radius: 24px;
+      background: #fff;
+      color: #17291b;
+      text-align: center;
+    }
+
+    #resultTitle { margin: 0 0 18px; font-size: 24px; }
+    .result-label { margin: 0; font-size: 14px; }
+    #finalScore { margin: 8px 0 18px; font-size: 48px; font-weight: bold; }
+    .result-message { margin: 0 0 24px; line-height: 1.5; }
+    #replay {
+      width: 100%;
+      min-height: 48px;
+      padding: 14px;
+      border: 0;
+      border-radius: 12px;
+      background: #ffe45c;
+      color: #17291b;
+      font: bold 16px Arial, sans-serif;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    #replay:focus-visible { outline: 3px solid #17291b; outline-offset: 4px; }
+    #replay:disabled { opacity: 0.5; cursor: default; }
+
     #build {
       position: fixed; right: 12px;
       bottom: max(12px, env(safe-area-inset-bottom));
@@ -116,7 +161,7 @@
 </head>
 
 <body>
-  <div id="build">NF-5.1</div>
+  <div id="build">NF-7.1</div>
   <div id="hud">
     <p id="energy" class="counter">
       ENERGÍA: <span id="score">0</span>
@@ -148,6 +193,17 @@
       <span class="ingredient" aria-hidden="true">🌾</span>
       <span>Cereal +150</span>
     </button>
+  </div>
+
+  <div id="resultLayer" hidden role="dialog" aria-modal="true"
+    aria-labelledby="resultTitle" aria-describedby="resultMessage">
+    <div class="result-card">
+      <h1 id="resultTitle">ENERGÍA RECUPERADA</h1>
+      <p class="result-label">TU PUNTUACIÓN</p>
+      <p id="finalScore">0 pts</p>
+      <p id="resultMessage" class="result-message">Recargá tu energía de verdad.</p>
+      <button id="replay" type="button">JUGAR DE NUEVO</button>
+    </div>
   </div>
 
   <a-scene
@@ -191,6 +247,11 @@
       const hud = document.getElementById("hud");
       const objects = Array.from(document.querySelectorAll(".game-object"));
       const busy = new Set();
+      const collectionTimers = new Set();
+      const resultLayer = document.getElementById("resultLayer");
+      const finalScore = document.getElementById("finalScore");
+      const replay = document.getElementById("replay");
+      const resultMessage = document.getElementById("resultMessage");
       let score = 0;
 
       let slots = [];
@@ -300,7 +361,18 @@
         pendingStart = null;
       }
 
+      function clearCollectionEffects() {
+        collectionTimers.forEach(id => clearTimeout(id));
+        collectionTimers.clear();
+        busy.clear();
+        objects.forEach(button => {
+          button.classList.remove("collected");
+          button.disabled = true;
+        });
+      }
+
       function finish() {
+        if (finished) return;
         finished = true;
         running = false;
 
@@ -312,7 +384,14 @@
         renderTime();
         hideObjects();
 
-        status.textContent = "Partida terminada: " + score + " pts. Recargá para repetir.";
+        clearCollectionEffects();
+        finalScore.textContent = score + " pts";
+        resultMessage.textContent = "Recargá tu energía de verdad.";
+        status.textContent = "Partida terminada";
+        hud.hidden = true;
+        resultLayer.hidden = false;
+        replay.disabled = failed;
+        replay.focus({ preventScroll: true });
       }
 
       function consumeTime() {
@@ -419,6 +498,10 @@
       scene.addEventListener("arError", (event) => {
         failed = true;
         ready = false;
+        if (finished) {
+          replay.disabled = true;
+          resultMessage.textContent = "No se pudo abrir la cámara. Revisá los permisos y recargá.";
+        }
 
         cancelPendingStart();
         pause();
@@ -477,7 +560,8 @@
         scoreElement.textContent = String(score);
         button.classList.add("collected");
 
-        setTimeout(() => {
+        const collectionTimer = setTimeout(() => {
+          collectionTimers.delete(collectionTimer);
           if (running && targetVisible && !finished && !failed &&
               !document.hidden && !gameLayer.hidden) moveObject(button);
           busy.delete(button);
@@ -485,7 +569,31 @@
           button.disabled = !running || !targetVisible || finished ||
             failed || document.hidden || gameLayer.hidden;
         }, 250);
+        collectionTimers.add(collectionTimer);
       }
+
+      replay.addEventListener("click", () => {
+        if (!finished || failed) return;
+        cancelPendingStart();
+        cancelAnimationFrame(frame);
+        clearCollectionEffects();
+        frame = null;
+        score = 0;
+        remaining = 15000;
+        lastTick = 0;
+        running = false;
+        started = false;
+        finished = false;
+        scoreElement.textContent = "0";
+        renderTime();
+        hideObjects();
+        resultLayer.hidden = true;
+        hud.hidden = false;
+        replay.blur();
+        status.textContent = "Apuntá al afiche para jugar de nuevo";
+        // Si el afiche sigue visible, prepara una nueva partida en 500 ms.
+        scheduleStart();
+      });
 
       objects.forEach(button => {
         button.addEventListener("pointerdown", event => {
