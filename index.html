@@ -5,7 +5,7 @@
   <meta name="viewport"
         content="width=device-width, initial-scale=1, viewport-fit=cover">
 
-  <title>Nutrifrut | Fase 4 | NF-4.1</title>
+  <title>Nutrifrut | Fase 5 | NF-5.1</title>
 
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -65,20 +65,17 @@
     #gameLayer {
       position: fixed;
       top: 180px;
-      bottom: max(16px, env(safe-area-inset-bottom));
+      bottom: calc(max(16px, env(safe-area-inset-bottom)) + 40px);
       left: max(16px, env(safe-area-inset-left));
       right: max(16px, env(safe-area-inset-right));
       z-index: 900;
-      display: flex;
-      flex-wrap: wrap;
-      align-content: center;
-      justify-content: center;
-      gap: 14px;
       pointer-events: none;
     }
 
     .game-object {
-      flex: 0 0 82px;
+      position: absolute;
+      box-sizing: border-box;
+      width: 82px;
       height: 94px;
       padding: 8px 4px;
       border: 0;
@@ -119,7 +116,7 @@
 </head>
 
 <body>
-  <div id="build">NF-4.1</div>
+  <div id="build">NF-5.1</div>
   <div id="hud">
     <p id="energy" class="counter">
       ENERGÍA: <span id="score">0</span>
@@ -196,8 +193,66 @@
       const busy = new Set();
       let score = 0;
 
+      let slots = [];
+      const occupied = new Map();
+
+      function placeObject(button, slotIndex) {
+        const slot = slots[slotIndex];
+        occupied.set(button, slotIndex);
+        button.style.left = (slot.x + Math.random() * slot.extraX) + "px";
+        button.style.top = (slot.y + Math.random() * slot.extraY) + "px";
+      }
+
       function positionObjects() {
         gameLayer.style.top = Math.ceil(hud.getBoundingClientRect().bottom + 16) + "px";
+        const margin = 12;
+        const gap = 20;
+        const itemWidth = 82;
+        const itemHeight = 94;
+        const width = gameLayer.clientWidth - margin * 2;
+        const height = gameLayer.clientHeight - margin * 2;
+        const columns = Math.floor((width + gap) / (itemWidth + gap));
+        const rows = Math.floor((height + gap) / (itemHeight + gap));
+        slots = [];
+        occupied.clear();
+
+        if (columns < 1 || rows < 1 || columns * rows < objects.length) return false;
+
+        const cellWidth = (width - gap * (columns - 1)) / columns;
+        const cellHeight = (height - gap * (rows - 1)) / rows;
+        for (let row = 0; row < rows; row++) {
+          for (let column = 0; column < columns; column++) {
+            slots.push({
+              x: margin + column * (cellWidth + gap),
+              y: margin + row * (cellHeight + gap),
+              extraX: Math.max(0, cellWidth - itemWidth),
+              extraY: Math.max(0, cellHeight - itemHeight)
+            });
+          }
+        }
+
+        const available = slots.map((_, index) => index);
+        objects.forEach(button => {
+          const choice = Math.floor(Math.random() * available.length);
+          placeObject(button, available.splice(choice, 1)[0]);
+        });
+        return true;
+      }
+
+      function moveObject(button) {
+        const previous = occupied.get(button);
+        const used = new Set(occupied.values());
+        const available = slots.map((_, index) => index)
+          .filter(index => !used.has(index));
+        if (available.length) {
+          placeObject(button, available[Math.floor(Math.random() * available.length)]);
+        } else {
+          // En pantallas pequeñas intercambia posiciones sin superponer tarjetas.
+          const other = objects.find(item => item !== button);
+          const destination = occupied.get(other);
+          placeObject(button, destination);
+          placeObject(other, previous);
+        }
       }
 
       function hideObjects() {
@@ -206,9 +261,13 @@
       }
 
       function showObjects() {
-        positionObjects();
         gameLayer.hidden = false;
+        if (!positionObjects()) {
+          hideObjects();
+          return false;
+        }
         objects.forEach(button => { button.disabled = busy.has(button); });
+        return true;
       }
 
       let ready = false;
@@ -327,7 +386,11 @@
           status.textContent =
             "Tocá los ingredientes para recuperar energía";
 
-          showObjects();
+          if (!showObjects()) {
+            pause();
+            status.textContent = "No hay espacio suficiente. Girá el celular para continuar.";
+            return;
+          }
 
           frame = requestAnimationFrame(tick);
         }, 500);
@@ -414,8 +477,9 @@
         scoreElement.textContent = String(score);
         button.classList.add("collected");
 
-        // En esta fase reaparece en el mismo lugar, sin movimiento aleatorio.
         setTimeout(() => {
+          if (running && targetVisible && !finished && !failed &&
+              !document.hidden && !gameLayer.hidden) moveObject(button);
           busy.delete(button);
           button.classList.remove("collected");
           button.disabled = !running || !targetVisible || finished ||
@@ -438,9 +502,17 @@
         });
       });
 
-      window.addEventListener("resize", positionObjects);
+      window.addEventListener("resize", () => {
+        if (running) {
+          if (!showObjects()) {
+            pause();
+            status.textContent = "No hay espacio suficiente. Girá el celular para continuar.";
+          }
+        } else if (targetVisible && ready && !finished && !failed && !document.hidden) {
+          scheduleStart();
+        }
+      });
       renderTime();
-      positionObjects();
     });
   </script>
 </body>
