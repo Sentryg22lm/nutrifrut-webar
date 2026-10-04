@@ -2,10 +2,11 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Nutrifrut · Prueba de cámara y tracking</title>
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, viewport-fit=cover">
 
-  <!-- Versiones fijadas: integración oficial de MindAR Image Tracking. -->
+  <title>Nutrifrut | Fase 4 | NF-4.1</title>
+
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
@@ -18,13 +19,39 @@
       font-family: Arial, Helvetica, sans-serif;
     }
 
-    /* Solo el mensaje tiene fondo. MindAR/A-Frame gestionan video y canvas. */
-    #status {
+    #hud {
       position: fixed;
       top: max(16px, env(safe-area-inset-top));
-      left: 16px;
-      right: 16px;
-      z-index: 10;
+      left: max(16px, env(safe-area-inset-left));
+      right: max(16px, env(safe-area-inset-right));
+      z-index: 1000;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .counter {
+      margin: 0;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      font-size: 18px;
+      font-weight: bold;
+      line-height: 1.4;
+    }
+
+    #energy {
+      color: #ffe45c;
+    }
+
+    #timer {
+      font-variant-numeric: tabular-nums;
+    }
+
+    #status {
+      grid-column: 1 / -1;
       margin: 0;
       padding: 12px 16px;
       border-radius: 12px;
@@ -33,22 +60,118 @@
       font-size: 16px;
       line-height: 1.4;
       text-align: center;
+    }
+
+    #gameLayer {
+      position: fixed;
+      top: 180px;
+      bottom: max(16px, env(safe-area-inset-bottom));
+      left: max(16px, env(safe-area-inset-left));
+      right: max(16px, env(safe-area-inset-right));
+      z-index: 900;
+      display: flex;
+      flex-wrap: wrap;
+      align-content: center;
+      justify-content: center;
+      gap: 14px;
       pointer-events: none;
+    }
+
+    .game-object {
+      flex: 0 0 82px;
+      height: 94px;
+      padding: 8px 4px;
+      border: 0;
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.94);
+      color: #17291b;
+      font: bold 12px Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      pointer-events: auto;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: pointer;
+      transition: transform 120ms ease-out, opacity 120ms ease-out;
+    }
+
+    .ingredient { font-size: 34px; line-height: 1; }
+    .game-object.collected { transform: scale(1.2); opacity: 0; }
+    .game-object:focus-visible { outline: 3px solid #ffe45c; outline-offset: 3px; }
+    [hidden] { display: none !important; }
+    #build {
+      position: fixed; right: 12px;
+      bottom: max(12px, env(safe-area-inset-bottom));
+      z-index: 1100; padding: 6px 9px; border-radius: 8px;
+      color: #fff; background: rgba(0,0,0,.7);
+      font-size: 12px; pointer-events: none;
+    }
+
+    .a-enter-vr,
+    .a-enter-ar {
+      display: none !important;
     }
   </style>
 </head>
-<body>
-  <p id="status" role="status" aria-live="polite">Iniciando cámara… Permití el acceso a la cámara.</p>
 
-  <!-- Fase 1 exclusivamente. Sin fondos de escena ni capas de juego. -->
+<body>
+  <div id="build">NF-4.1</div>
+  <div id="hud">
+    <p id="energy" class="counter">
+      ENERGÍA: <span id="score">0</span>
+    </p>
+
+    <p id="timer" class="counter"
+       aria-label="Tiempo: 15 segundos">
+      15 s
+    </p>
+
+    <p id="status" role="status" aria-live="polite">
+      Iniciando cámara… Permití el acceso a la cámara.
+    </p>
+  </div>
+
+  <div id="gameLayer" hidden aria-label="Ingredientes tocables">
+    <button class="game-object" type="button" data-points="100" disabled
+      aria-label="Fresa: sumar 100 puntos">
+      <span class="ingredient" aria-hidden="true">🍓</span>
+      <span>Fresa +100</span>
+    </button>
+    <button class="game-object" type="button" data-points="120" disabled
+      aria-label="Banana: sumar 120 puntos">
+      <span class="ingredient" aria-hidden="true">🍌</span>
+      <span>Banana +120</span>
+    </button>
+    <button class="game-object" type="button" data-points="150" disabled
+      aria-label="Cereal: sumar 150 puntos">
+      <span class="ingredient" aria-hidden="true">🌾</span>
+      <span>Cereal +150</span>
+    </button>
+  </div>
+
   <a-scene
     id="arScene"
-    mindar-image="imageTargetSrc: ./target/targets.mind; uiLoading: no; uiScanning: no; uiError: no;"
+    mindar-image="
+      imageTargetSrc: ./target/targets.mind;
+      uiLoading: no;
+      uiScanning: no;
+      uiError: no;"
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false">
-    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-    <a-entity id="targetAnchor" mindar-image-target="targetIndex: 0">
-      <!-- MindAR muestra y oculta el anclaje al encontrar/perder el afiche. -->
+
+    <a-camera
+      position="0 0 0"
+      look-controls="enabled: false">
+    </a-camera>
+
+    <a-entity
+      id="targetAnchor"
+      mindar-image-target="targetIndex: 0">
+
       <a-ring
         position="0 0 0.01"
         radius-inner="0.18"
@@ -56,6 +179,7 @@
         color="#00ff66"
         material="shader: flat; side: double;">
       </a-ring>
+
     </a-entity>
   </a-scene>
 
@@ -64,32 +188,259 @@
       const scene = document.getElementById("arScene");
       const target = document.getElementById("targetAnchor");
       const status = document.getElementById("status");
+      const timer = document.getElementById("timer");
+      const scoreElement = document.getElementById("score");
+      const gameLayer = document.getElementById("gameLayer");
+      const hud = document.getElementById("hud");
+      const objects = Array.from(document.querySelectorAll(".game-object"));
+      const busy = new Set();
+      let score = 0;
 
-      if (!window.AFRAME || !AFRAME.components["mindar-image"]) {
-        status.textContent = "No se pudo cargar la experiencia. Revisá tu conexión y recargá la página.";
-        console.error("[Nutrifrut Fase 1] No se cargaron A-Frame o MindAR.");
+      function positionObjects() {
+        gameLayer.style.top = Math.ceil(hud.getBoundingClientRect().bottom + 16) + "px";
+      }
+
+      function hideObjects() {
+        gameLayer.hidden = true;
+        objects.forEach(button => { button.disabled = true; });
+      }
+
+      function showObjects() {
+        positionObjects();
+        gameLayer.hidden = false;
+        objects.forEach(button => { button.disabled = busy.has(button); });
+      }
+
+      let ready = false;
+      let targetVisible = false;
+      let running = false;
+      let started = false;
+      let finished = false;
+      let failed = false;
+
+      let remaining = 15000;
+      let lastTick = 0;
+      let pendingStart = null;
+      let frame = null;
+
+      function renderTime() {
+        const seconds = Math.ceil(remaining / 1000);
+        const label = seconds + " s";
+
+        if (timer.textContent.trim() !== label) {
+          timer.textContent = label;
+          timer.setAttribute(
+            "aria-label",
+            "Tiempo: " + seconds + " segundos"
+          );
+        }
+      }
+
+      function cancelPendingStart() {
+        clearTimeout(pendingStart);
+        pendingStart = null;
+      }
+
+      function finish() {
+        finished = true;
+        running = false;
+
+        cancelPendingStart();
+        cancelAnimationFrame(frame);
+
+        frame = null;
+        remaining = 0;
+        renderTime();
+        hideObjects();
+
+        status.textContent = "Partida terminada: " + score + " pts. Recargá para repetir.";
+      }
+
+      function consumeTime() {
+        const now = performance.now();
+
+        remaining = Math.max(
+          0,
+          remaining - (now - lastTick)
+        );
+
+        lastTick = now;
+        renderTime();
+      }
+
+      function tick() {
+        if (!running) return;
+
+        consumeTime();
+
+        if (remaining === 0) {
+          finish();
+          return;
+        }
+
+        frame = requestAnimationFrame(tick);
+      }
+
+      function pause() {
+        hideObjects();
+        if (!running) return;
+
+        consumeTime();
+        running = false;
+
+        cancelAnimationFrame(frame);
+        frame = null;
+
+        if (remaining === 0) finish();
+      }
+
+      function scheduleStart() {
+        cancelPendingStart();
+
+        if (
+          !ready ||
+          !targetVisible ||
+          running ||
+          finished ||
+          failed ||
+          document.hidden
+        ) return;
+
+        status.textContent = started
+          ? "Afiche detectado. Preparando continuación…"
+          : "Afiche detectado. Preparando inicio…";
+
+        pendingStart = setTimeout(() => {
+          pendingStart = null;
+
+          if (
+            !targetVisible ||
+            document.hidden ||
+            finished ||
+            failed
+          ) return;
+
+          started = true;
+          running = true;
+          lastTick = performance.now();
+
+          status.textContent =
+            "Tocá los ingredientes para recuperar energía";
+
+          showObjects();
+
+          frame = requestAnimationFrame(tick);
+        }, 500);
+      }
+
+      if (
+        !window.AFRAME ||
+        !AFRAME.components["mindar-image"]
+      ) {
+        status.textContent =
+          "No se pudo cargar la experiencia. Revisá tu conexión y recargá.";
+
+        console.error(
+          "[Nutrifrut] No se cargaron A-Frame o MindAR."
+        );
+
         return;
       }
 
       scene.addEventListener("arReady", () => {
+        ready = true;
         status.textContent = "Cámara lista: Apuntá al afiche";
-        console.info("[Nutrifrut Fase 1] arReady");
+        scheduleStart();
       });
 
       scene.addEventListener("arError", (event) => {
-        status.textContent = "No se pudo abrir la cámara. Revisá los permisos del navegador y recargá la página.";
-        console.error("[Nutrifrut Fase 1] arError", event.detail);
+        failed = true;
+        ready = false;
+
+        cancelPendingStart();
+        pause();
+
+        status.textContent =
+          "No se pudo abrir la cámara. Revisá los permisos y recargá.";
+
+        console.error("[Nutrifrut] arError", event.detail);
       });
 
       target.addEventListener("targetFound", () => {
-        status.textContent = "Afiche detectado";
-        console.info("[Nutrifrut Fase 1] targetFound: 0");
+        targetVisible = true;
+        scheduleStart();
       });
 
       target.addEventListener("targetLost", () => {
-        status.textContent = "Volvé a apuntar al afiche";
-        console.info("[Nutrifrut Fase 1] targetLost: 0");
+        targetVisible = false;
+
+        cancelPendingStart();
+        pause();
+
+        if (finished || failed) return;
+
+        status.textContent = started
+          ? "Juego pausado: volvé a apuntar al afiche"
+          : "Volvé a apuntar al afiche";
       });
+
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) {
+          cancelPendingStart();
+          pause();
+
+          if (started && !finished && !failed) {
+            status.textContent = "Juego pausado";
+          }
+        } else {
+          scheduleStart();
+        }
+      });
+
+      function collect(button) {
+        if (!running || !targetVisible || finished || failed ||
+            document.hidden || gameLayer.hidden || button.disabled || busy.has(button)) return;
+
+        // Verifica el tiempo antes de aceptar el toque, incluso entre frames.
+        consumeTime();
+        if (remaining === 0) {
+          finish();
+          return;
+        }
+
+        busy.add(button);
+        button.disabled = true;
+        score += Number(button.dataset.points);
+        scoreElement.textContent = String(score);
+        button.classList.add("collected");
+
+        // En esta fase reaparece en el mismo lugar, sin movimiento aleatorio.
+        setTimeout(() => {
+          busy.delete(button);
+          button.classList.remove("collected");
+          button.disabled = !running || !targetVisible || finished ||
+            failed || document.hidden || gameLayer.hidden;
+        }, 250);
+      }
+
+      objects.forEach(button => {
+        button.addEventListener("pointerdown", event => {
+          if (event.isPrimary === false || (event.button !== undefined && event.button !== 0)) return;
+          event.preventDefault();
+          event.stopPropagation();
+          collect(button);
+        });
+        button.addEventListener("keydown", event => {
+          if ((event.key === "Enter" || event.key === " ") && !event.repeat) {
+            event.preventDefault();
+            collect(button);
+          }
+        });
+      });
+
+      window.addEventListener("resize", positionObjects);
+      renderTime();
+      positionObjects();
     });
   </script>
 </body>
