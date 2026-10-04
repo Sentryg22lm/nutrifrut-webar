@@ -2,10 +2,11 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Nutrifrut · Prueba de cámara y tracking</title>
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, viewport-fit=cover">
 
-  <!-- Versiones fijadas: integración oficial de MindAR Image Tracking. -->
+  <title>Nutrifrut | Fase 2</title>
+
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
@@ -18,13 +19,39 @@
       font-family: Arial, Helvetica, sans-serif;
     }
 
-    /* Solo el mensaje tiene fondo. MindAR/A-Frame gestionan video y canvas. */
-    #status {
+    #hud {
       position: fixed;
       top: max(16px, env(safe-area-inset-top));
-      left: 16px;
-      right: 16px;
-      z-index: 10;
+      left: max(16px, env(safe-area-inset-left));
+      right: max(16px, env(safe-area-inset-right));
+      z-index: 1000;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .counter {
+      margin: 0;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      font-size: 18px;
+      font-weight: bold;
+      line-height: 1.4;
+    }
+
+    #energy {
+      color: #ffe45c;
+    }
+
+    #timer {
+      font-variant-numeric: tabular-nums;
+    }
+
+    #status {
+      grid-column: 1 / -1;
       margin: 0;
       padding: 12px 16px;
       border-radius: 12px;
@@ -33,22 +60,50 @@
       font-size: 16px;
       line-height: 1.4;
       text-align: center;
-      pointer-events: none;
+    }
+
+    .a-enter-vr,
+    .a-enter-ar {
+      display: none !important;
     }
   </style>
 </head>
-<body>
-  <p id="status" role="status" aria-live="polite">Iniciando cámara… Permití el acceso a la cámara.</p>
 
-  <!-- Fase 1 exclusivamente. Sin fondos de escena ni capas de juego. -->
+<body>
+  <div id="hud">
+    <p id="energy" class="counter">
+      ENERGÍA: <span id="score">0</span>
+    </p>
+
+    <p id="timer" class="counter"
+       aria-label="Tiempo: 15 segundos">
+      15 s
+    </p>
+
+    <p id="status" role="status" aria-live="polite">
+      Iniciando cámara… Permití el acceso a la cámara.
+    </p>
+  </div>
+
   <a-scene
     id="arScene"
-    mindar-image="imageTargetSrc: ./target/targets.mind; uiLoading: no; uiScanning: no; uiError: no;"
+    mindar-image="
+      imageTargetSrc: ./target/targets.mind;
+      uiLoading: no;
+      uiScanning: no;
+      uiError: no;"
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false">
-    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-    <a-entity id="targetAnchor" mindar-image-target="targetIndex: 0">
-      <!-- MindAR muestra y oculta el anclaje al encontrar/perder el afiche. -->
+
+    <a-camera
+      position="0 0 0"
+      look-controls="enabled: false">
+    </a-camera>
+
+    <a-entity
+      id="targetAnchor"
+      mindar-image-target="targetIndex: 0">
+
       <a-ring
         position="0 0 0.01"
         radius-inner="0.18"
@@ -56,6 +111,7 @@
         color="#00ff66"
         material="shader: flat; side: double;">
       </a-ring>
+
     </a-entity>
   </a-scene>
 
@@ -66,29 +122,39 @@
       const status = document.getElementById("status");
 
       if (!window.AFRAME || !AFRAME.components["mindar-image"]) {
-        status.textContent = "No se pudo cargar la experiencia. Revisá tu conexión y recargá la página.";
-        console.error("[Nutrifrut Fase 1] No se cargaron A-Frame o MindAR.");
+        status.textContent =
+          "No se pudo cargar la experiencia. Revisá tu conexión y recargá.";
+
+        console.error(
+          "[Nutrifrut Fase 2] No se cargaron A-Frame o MindAR."
+        );
+
         return;
       }
 
       scene.addEventListener("arReady", () => {
         status.textContent = "Cámara lista: Apuntá al afiche";
-        console.info("[Nutrifrut Fase 1] arReady");
+        console.info("[Nutrifrut Fase 2] arReady");
       });
 
       scene.addEventListener("arError", (event) => {
-        status.textContent = "No se pudo abrir la cámara. Revisá los permisos del navegador y recargá la página.";
-        console.error("[Nutrifrut Fase 1] arError", event.detail);
+        status.textContent =
+          "No se pudo abrir la cámara. Revisá los permisos y recargá.";
+
+        console.error(
+          "[Nutrifrut Fase 2] arError",
+          event.detail
+        );
       });
 
       target.addEventListener("targetFound", () => {
         status.textContent = "Afiche detectado";
-        console.info("[Nutrifrut Fase 1] targetFound: 0");
+        console.info("[Nutrifrut Fase 2] targetFound: 0");
       });
 
       target.addEventListener("targetLost", () => {
         status.textContent = "Volvé a apuntar al afiche";
-        console.info("[Nutrifrut Fase 1] targetLost: 0");
+        console.info("[Nutrifrut Fase 2] targetLost: 0");
       });
     });
   </script>
