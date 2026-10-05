@@ -5,7 +5,7 @@
   <meta name="viewport"
         content="width=device-width, initial-scale=1, viewport-fit=cover">
 
-  <title>Nutrifrut | Experiencia completa | NF-12.2</title>
+  <title>Nutrifrut | Experiencia completa | NF-13.1</title>
 
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -295,6 +295,183 @@
 
   </script>
 
+  <script>
+    if (window.AFRAME && !AFRAME.components["nutrifrut-intro"]) {
+      AFRAME.registerComponent("nutrifrut-intro", {
+        init: function () {
+          this.root = null;
+          this.mode = "hidden";
+          this.time = 0;
+          this.blend = 1;
+          this.reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        },
+
+        build: function () {
+          if (this.root) return;
+          const T = AFRAME.THREE;
+          const finale = this.el.sceneEl.querySelector("#finaleFx").components["nutrifrut-finale"];
+          finale.build();
+          this.ownGeometries = new Set(); this.ownMaterials = new Set();
+          const material = color => {
+            const value = new T.MeshBasicMaterial({ color, transparent: true, depthWrite: false });
+            this.ownMaterials.add(value); return value;
+          };
+          const mesh = (geometry, mat, parent) => {
+            this.ownGeometries.add(geometry);
+            const value = new T.Mesh(geometry, mat); parent.add(value); return value;
+          };
+          this.root = new T.Group();
+          this.el.setObject3D("mesh", this.root);
+          this.target = this.el.parentEl;
+          this.root.add(new T.AmbientLight(0xffffff, 0.65));
+          const light = new T.DirectionalLight(0xffedd5, 1.6);
+          light.position.set(1, 2, 2); this.root.add(light);
+
+          // El afiche de prueba mide 596 × 842. Coordenadas relativas a su ancho.
+          this.halfHeight = 842 / 596 / 2;
+          this.frameMaterial = material(0x38bdf8);
+          this.cornerMaterial = material(0xfbbf24);
+          const x = 0.535, y = this.halfHeight + 0.035;
+          [-1, 1].forEach(side => {
+            const vertical = mesh(new T.PlaneGeometry(0.004, y * 2), this.frameMaterial, this.root);
+            vertical.position.set(side * x, 0, 0.025);
+            const horizontal = mesh(new T.PlaneGeometry(x * 2, 0.004), this.frameMaterial, this.root);
+            horizontal.position.set(0, side * y, 0.025);
+          });
+          [-1, 1].forEach(sx => [-1, 1].forEach(sy => {
+            const a = mesh(new T.PlaneGeometry(0.13, 0.012), this.cornerMaterial, this.root);
+            a.position.set(sx * (x - 0.06), sy * y, 0.027);
+            const b = mesh(new T.PlaneGeometry(0.012, 0.13), this.cornerMaterial, this.root);
+            b.position.set(sx * x, sy * (y - 0.06), 0.027);
+          }));
+
+          this.preview = new T.Group(); this.root.add(this.preview);
+          // Reutiliza geometrías y materiales del producto provisional del cierre.
+          this.product = finale.product.clone(true);
+          this.product.scale.setScalar(0.27);
+          this.product.position.set(0, -0.08, 0.15);
+          this.preview.add(this.product);
+          this.platform = new T.Group();
+          this.platform.position.set(0, -0.23, 0.13);
+          this.platform.rotation.x = Math.PI / 2.3;
+          this.preview.add(this.platform);
+          this.ringMaterial = material(0xfbbf24);
+          this.blueMaterial = material(0x38bdf8);
+          this.ringMaterial.opacity = 0.75; this.blueMaterial.opacity = 0.65;
+          mesh(new T.TorusGeometry(0.25, 0.003, 6, 40), this.ringMaterial, this.platform);
+          mesh(new T.TorusGeometry(0.19, 0.002, 6, 32), this.blueMaterial, this.platform);
+
+          this.ingredients = [];
+          const red = material(0xff3c6f), green = material(0x58bd49);
+          const yellow = material(0xffd648), brown = material(0x845335);
+          const strawberry = new T.Group();
+          const fruit = mesh(new T.SphereGeometry(0.071, 12, 10), red, strawberry);
+          fruit.scale.set(0.88, 1.16, 0.8);
+          for (let i = 0; i < 5; i++) {
+            const leaf = mesh(new T.ConeGeometry(0.025, 0.065, 3), green, strawberry);
+            const angle = i * Math.PI * 2 / 5;
+            leaf.position.set(Math.cos(angle) * 0.025, 0.063, Math.sin(angle) * 0.025);
+            leaf.rotation.z = Math.cos(angle) * 1.1;
+          }
+          [[-0.027,0.027],[0.026,0.024],[-0.032,-0.011],[0,-0.017],[0.027,-0.028],[0,-0.055]].forEach(([px,py]) => {
+            const seed = mesh(new T.SphereGeometry(0.004, 5, 4), yellow, strawberry);
+            seed.position.set(px,py,0.052);
+          });
+          const banana = new T.Group();
+          const bananaBody = mesh(new T.TorusGeometry(0.074, 0.023, 6, 20, Math.PI * 0.95), yellow, banana);
+          bananaBody.rotation.z = Math.PI + 0.25;
+          const cap = mesh(new T.SphereGeometry(0.024, 6, 5), brown, banana);
+          cap.position.set(-0.068,-0.018,0);
+          const cereal = new T.Group();
+          mesh(new T.CylinderGeometry(0.003,0.003,0.22,5), green,cereal);
+          for (let i=0;i<4;i++) [-1,1].forEach(side => {
+            const grain = mesh(new T.SphereGeometry(0.019,6,5), yellow,cereal);
+            grain.scale.set(0.6,1.3,0.55);
+            grain.position.set(side*0.019,-0.06+i*0.041,0);
+            grain.rotation.z=side*-0.65;
+          });
+          const positions = [[-0.62,0.24],[0.62,-0.32],[0.59,0.57]];
+          [strawberry,banana,cereal].forEach((item,index) => {
+            item.position.set(positions[index][0],positions[index][1],0.06);
+            this.preview.add(item);
+            this.ingredients.push({item,y:positions[index][1],phase:index*2.1});
+          });
+
+          const count = 32;
+          const points = new Float32Array(count*3);
+          for(let i=0;i<count;i++) {
+            points[i*3]=(i%2 ? -1 : 1)*(0.56+Math.random()*0.09);
+            points[i*3+1]=(Math.random()-.5)*(this.halfHeight*2);
+            points[i*3+2]=0.04+Math.random()*0.06;
+          }
+          this.pointGeometry=new T.BufferGeometry();
+          this.pointGeometry.setAttribute("position",new T.BufferAttribute(points,3));
+          this.ownGeometries.add(this.pointGeometry);
+          this.pointMaterial=new T.PointsMaterial({color:0x38bdf8,size:0.007,transparent:true,opacity:.55,depthWrite:false});
+          this.ownMaterials.add(this.pointMaterial);
+          this.preview.add(new T.Points(this.pointGeometry,this.pointMaterial));
+        },
+
+        setMode: function (mode) {
+          this.mode=mode;
+          if(mode==="hidden" && !this.root) return;
+          this.build();
+          this.root.visible=mode!=="hidden";
+          if(mode==="preview") { this.blend=1; this.preview.scale.setScalar(1); this.preview.visible=true; }
+          if(mode==="preview") { this.lastFraming=undefined; this.checkFramingAt=0; }
+        },
+
+        tick: function (time,delta) {
+          if(!this.root || this.mode==="hidden" || document.hidden || !this.target.object3D.visible) return;
+          const dt=Math.min(64,delta||0)/1000;
+          this.time+=dt;
+          if(this.mode==="playing") this.blend=Math.max(0,this.blend-dt/0.4);
+          this.preview.visible=this.blend>0;
+          this.preview.scale.setScalar(this.blend);
+          const preview=this.mode==="preview";
+          if(preview && this.time>=(this.checkFramingAt||0)) {
+            this.checkFramingAt=this.time+.25;
+            const T=AFRAME.THREE, scene=this.el.sceneEl, rect=scene.canvas.getBoundingClientRect();
+            const hud=document.getElementById("hud").getBoundingClientRect();
+            const panel=document.getElementById("introPanel").getBoundingClientRect();
+            this.root.updateWorldMatrix(true,false);
+            let framed=true;
+            [-1,1].forEach(sx=>[-1,1].forEach(sy=>{
+              const point=this.root.localToWorld(new T.Vector3(sx*.71,sy*(this.halfHeight+.055),.02)).project(scene.camera);
+              const px=rect.left+(point.x+1)*.5*rect.width;
+              const py=rect.top+(1-point.y)*.5*rect.height;
+              if(px<10 || px>innerWidth-10 || py<hud.bottom+8 || py>panel.top-8 || point.z<-1 || point.z>1) framed=false;
+            }));
+            if(framed!==this.lastFraming) {
+              this.lastFraming=framed;
+              this.el.emit("intro-framing",{framed});
+            }
+          }
+          this.frameMaterial.opacity=preview ? .5+Math.sin(this.time*1.6)*.15 : .2;
+          this.cornerMaterial.opacity=preview ? .75+Math.sin(this.time*1.6)*.2 : .45;
+          if(!preview || this.reduced) return;
+          this.product.position.y=-.08+Math.sin(this.time*1.5)*.014;
+          this.product.rotation.set(.13,Math.sin(this.time*.65)*.38,-.07);
+          this.platform.rotation.z=this.time*.22;
+          this.ingredients.forEach(({item,y,phase})=>{
+            item.position.y=y+Math.sin(this.time*1.4+phase)*.018;
+            item.rotation.y=Math.sin(this.time*.8+phase)*.25;
+            item.rotation.z=Math.sin(this.time*.9+phase)*.12;
+          });
+        },
+
+        remove: function () {
+          if(!this.root) return;
+          this.el.removeObject3D("mesh");
+          this.ownGeometries.forEach(item=>item.dispose());
+          this.ownMaterials.forEach(item=>item.dispose());
+          this.root=null;
+        }
+      });
+    }
+
+  </script>
+
   <style>
     html, body {
       margin: 0;
@@ -562,6 +739,22 @@
       #finishReveal { font-size: 10px; padding: 8px; }
     }
 
+    #introPanel {
+      position:fixed; z-index:1200;
+      left:max(16px,env(safe-area-inset-left)); right:max(16px,env(safe-area-inset-right));
+      bottom:calc(max(16px,env(safe-area-inset-bottom)) + 36px);
+      width:min(400px,calc(100% - 32px)); margin-inline:auto;
+      box-sizing:border-box; padding:16px; border-radius:20px;
+      background:rgba(13,19,38,.94); color:#fff; border:1px solid rgba(255,255,255,.18);
+      box-shadow:0 12px 40px rgba(0,0,0,.25); text-align:center;
+    }
+    .intro-eyebrow { margin:0 0 7px; color:#ffe45c; font-size:10px; font-weight:900; letter-spacing:.17em; }
+    #introInstruction { margin:0 0 12px; font-size:13px; line-height:1.45; color:#e2e8f0; }
+    #startGame { width:100%; min-height:48px; padding:13px; border:0; border-radius:12px;
+      background:#ffe45c; color:#17213c; font:bold 14px Arial,sans-serif; cursor:pointer; touch-action:manipulation; }
+    #startGame:disabled { opacity:.45; cursor:default; }
+    @media(max-height:480px) { #introPanel { width:min(320px,calc(100% - 32px)); padding:12px; } .intro-eyebrow { display:none; } #introInstruction { font-size:11px; margin-bottom:8px; } #startGame { min-height:40px; padding:10px; font-size:12px; } }
+
   </style>
 </head>
 
@@ -591,7 +784,7 @@
     </defs>
   </svg>
 
-  <div id="build">NF-12.2</div>
+  <div id="build">NF-13.1</div>
   <div id="hud">
     <p id="energy" class="counter">
       ENERGÍA: <span id="score">0</span>
@@ -606,6 +799,12 @@
       Iniciando cámara… Permití el acceso a la cámara.
     </p>
   </div>
+
+  <section id="introPanel" aria-label="Presentación del desafío">
+    <p class="intro-eyebrow">DESAFÍO NUTRIFRUT</p>
+    <p id="introInstruction">Apuntá al afiche completo para activar el escenario.</p>
+    <button id="startGame" type="button" disabled>INICIAR DESAFÍO</button>
+  </section>
 
   <div id="gameLayer" hidden aria-label="Ingredientes tocables">
     <button class="game-object" type="button" data-points="100" disabled
@@ -684,7 +883,7 @@
         </div>
       </details>
       <button id="replay" type="button">JUGAR DE NUEVO</button>
-      <p class="result-footer">NUTRIFRUT · NF-12.2</p>
+      <p class="result-footer">NUTRIFRUT · NF-13.1</p>
     </div>
   </div>
 
@@ -721,7 +920,8 @@
       id="targetAnchor"
       mindar-image-target="targetIndex: 0">
 
-      <a-ring
+      <a-entity id="introStage" nutrifrut-intro></a-entity>
+      <a-ring visible="false"
         position="0 0 0.01"
         radius-inner="0.18"
         radius-outer="0.23"
@@ -1182,6 +1382,57 @@
         if (event.key === "Tab") { event.preventDefault(); revealButton.focus(); }
       });
 
+      const introPanel=document.getElementById("introPanel");
+      const startButton=document.getElementById("startGame");
+      const introInstruction=document.getElementById("introInstruction");
+      const introEntity=document.getElementById("introStage");
+      let introStable=false;
+
+      function introMode(mode) {
+        const component=introEntity.components && introEntity.components["nutrifrut-intro"];
+        if(component) {
+          try { component.setMode(mode); }
+          catch (_) { /* El botón y el juego siguen disponibles sin efectos. */ }
+        }
+      }
+
+      function showIntro() {
+        introPanel.hidden=false;
+        startButton.disabled=true;
+        introInstruction.textContent="Apuntá al afiche completo para activar el escenario.";
+      }
+
+      function runGame() {
+        if(!ready || !targetVisible || finished || failed || document.hidden || running) return;
+        cancelPendingStart();
+        introStable=false;
+        introPanel.hidden=true;
+        startButton.disabled=true;
+        started=true;
+        running=true;
+        lastTick=performance.now();
+        introMode("playing");
+        status.textContent="Tocá los ingredientes para recuperar energía";
+        if(!showObjects()) {
+          pause();
+          status.textContent="No hay espacio suficiente. Girá el celular para continuar.";
+          return;
+        }
+        frame=requestAnimationFrame(tick);
+      }
+
+      startButton.addEventListener("click",()=>{
+        if(started || !introStable || startButton.disabled) return;
+        runGame();
+        startButton.blur();
+      });
+      introEntity.addEventListener("intro-framing",event=>{
+        if(started || finished || failed || !introStable) return;
+        introInstruction.textContent=event.detail.framed
+          ? "15 segundos. Tocá los ingredientes y sumá energía."
+          : "Alejá un poco la cámara para ver el afiche y su escenario completos.";
+      });
+
       let slots = [];
       const occupied = new Map();
 
@@ -1313,6 +1564,9 @@
         hideObjects();
 
         clearCollectionEffects();
+        introPanel.hidden=true;
+        startButton.disabled=true;
+        introMode("hidden");
         finalScore.textContent = score + " pts";
         resultMessage.textContent = NUTRIFRUT_CONFIG.brandMessage;
         status.textContent = "Partida terminada";
@@ -1361,45 +1615,27 @@
 
       function scheduleStart() {
         cancelPendingStart();
-
-        if (
-          !ready ||
-          !targetVisible ||
-          running ||
-          finished ||
-          failed ||
-          document.hidden
-        ) return;
-
-        status.textContent = started
-          ? "Afiche detectado. Preparando continuación…"
-          : "Afiche detectado. Preparando inicio…";
-
-        pendingStart = setTimeout(() => {
-          pendingStart = null;
-
-          if (
-            !targetVisible ||
-            document.hidden ||
-            finished ||
-            failed
-          ) return;
-
-          started = true;
-          running = true;
-          lastTick = performance.now();
-
-          status.textContent =
-            "Tocá los ingredientes para recuperar energía";
-
-          if (!showObjects()) {
-            pause();
-            status.textContent = "No hay espacio suficiente. Girá el celular para continuar.";
+        if (!ready || !targetVisible || running || finished || failed || document.hidden) return;
+        if (!started) {
+          showIntro();
+          introStable=false;
+          status.textContent="Afiche detectado. Activando escenario…";
+        } else {
+          status.textContent="Afiche detectado. Preparando continuación…";
+        }
+        pendingStart=setTimeout(()=>{
+          pendingStart=null;
+          if(!targetVisible || document.hidden || finished || failed || !ready) return;
+          if(!started) {
+            introStable=true;
+            startButton.disabled=false;
+            introMode("preview");
+            introInstruction.textContent="15 segundos. Tocá los ingredientes y sumá energía.";
+            status.textContent="Escenario listo. Iniciá cuando quieras.";
             return;
           }
-
-          frame = requestAnimationFrame(tick);
-        }, 500);
+          runGame();
+        },500);
       }
 
       if (
@@ -1409,6 +1645,7 @@
         status.textContent =
           "No se pudo cargar la experiencia. Revisá tu conexión y recargá.";
 
+        introPanel.hidden=true;
         console.error(
           "[Nutrifrut] No se cargaron A-Frame o MindAR."
         );
@@ -1425,6 +1662,10 @@
       scene.addEventListener("arError", (event) => {
         failed = true;
         ready = false;
+        introStable=false;
+        startButton.disabled=true;
+        introPanel.hidden=true;
+        introMode("hidden");
         if (finished) {
           replay.disabled = true;
           resultMessage.textContent = "No se pudo abrir la cámara. Revisá los permisos y recargá.";
@@ -1447,6 +1688,9 @@
 
       target.addEventListener("targetLost", () => {
         targetVisible = false;
+        introStable=false;
+        startButton.disabled=true;
+        if(!started && !finished && !failed) showIntro();
 
         cancelPendingStart();
         pause();
@@ -1465,6 +1709,8 @@
           cinematicLayer.classList[document.hidden ? "add" : "remove"]("cinema-paused");
         }
         if (document.hidden) {
+          introStable=false;
+          startButton.disabled=true;
           cancelPendingStart();
           pause();
 
@@ -1518,6 +1764,9 @@
         running = false;
         started = false;
         finished = false;
+        introStable=false;
+        showIntro();
+        introMode("preview");
         scoreElement.textContent = "0";
         renderTime();
         hideObjects();
@@ -1525,7 +1774,7 @@
         hud.hidden = false;
         replay.blur();
         status.textContent = "Apuntá al afiche para jugar de nuevo";
-        // Si el afiche sigue visible, prepara una nueva partida en 500 ms.
+        // Vuelve a la presentación; cada partida requiere tocar INICIAR DESAFÍO.
         scheduleStart();
       });
 
