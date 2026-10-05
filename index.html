@@ -5,7 +5,7 @@
   <meta name="viewport"
         content="width=device-width, initial-scale=1, viewport-fit=cover">
 
-  <title>Nutrifrut | Experiencia completa | NF-13.1</title>
+  <title>Nutrifrut | Experiencia completa | NF-14.1</title>
 
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -110,12 +110,14 @@
             const seal = new T.Mesh(sealGeometry, sealMaterial);
             seal.position.x = x;
             this.product.add(seal);
-            for (let i = 0; i < 7; i++) {
-              const crimp = new T.Mesh(new T.BoxGeometry(0.009, 0.65, 0.008), sealMaterial);
-              crimp.position.set(x - 0.07 + i * 0.023, 0, 0.025);
-              this.product.add(crimp);
-            }
           });
+          const crimps=new T.InstancedMesh(new T.BoxGeometry(0.009,0.65,0.008),sealMaterial,14);
+          const crimpPose=new T.Object3D();let crimpIndex=0;
+          [-0.89,0.89].forEach(x=>{for(let i=0;i<7;i++) {
+            crimpPose.position.set(x-0.07+i*0.023,0,0.025);crimpPose.updateMatrix();
+            crimps.setMatrixAt(crimpIndex++,crimpPose.matrix);
+          }});
+          crimps.instanceMatrix.needsUpdate=true;this.product.add(crimps);
 
           const labelCanvas = document.createElement("canvas");
           labelCanvas.width = 512; labelCanvas.height = 256;
@@ -157,9 +159,22 @@
           this.particleMaterial.size = scale * 0.035;
         },
 
-        start: function (onComplete) {
+        start: function (onComplete, originMatrix) {
           this.build();
           this.fit();
+          this.origin=null;
+          if(originMatrix) {
+            const T=AFRAME.THREE,camera=this.el.sceneEl.camera;
+            camera.updateWorldMatrix(true,false);
+            const local=new T.Matrix4().copy(camera.matrixWorld).invert().multiply(originMatrix);
+            const position=new T.Vector3(),quaternion=new T.Quaternion(),scale=new T.Vector3();
+            local.decompose(position,quaternion,scale);
+            if(position.z<0) {
+              const ratio=this.depth / -position.z / this.root.scale.x;
+              this.origin={position:new T.Vector3(position.x*ratio,position.y*ratio,0),
+                quaternion,scale:Math.max(.015,scale.x*ratio)};
+            }
+          }
           this.onComplete = onComplete;
           this.elapsed = 0;
           this.lastFrame = performance.now();
@@ -199,8 +214,14 @@
           }
           this.product.scale.setScalar(1.2 * Math.max(0, back));
           this.product.position.set(0, out * 0.15 + Math.sin(hold * 2) * 0.055, -0.3 + out * 0.85);
-          this.product.rotation.set(out * 0.15, out * Math.PI * 2 + hold * Math.PI * 2 / 12,
+          this.product.rotation.set(out * 0.15, (this.origin ? .12 : out * Math.PI * 2) + hold * Math.PI * 2 / 12,
             -0.2 + out * 0.25 + Math.sin(hold) * 0.025);
+          if(this.origin && seconds<1.5) {
+            const q=clamp(seconds/1.5),ease=q*q*(3-2*q);
+            this.product.position.copy(this.origin.position).lerp(new AFRAME.THREE.Vector3(0,.15,.55),ease);
+            this.product.scale.setScalar(this.origin.scale+(1.2-this.origin.scale)*ease);
+            this.product.quaternion.copy(this.origin.quaternion).slerp(new AFRAME.THREE.Quaternion().setFromEuler(new AFRAME.THREE.Euler(.15,.12,.05)),ease);
+          }
           const burst = clamp(seconds / 0.9);
           this.shock.scale.setScalar(1 + 17 * (1 - Math.pow(1 - burst, 3)));
           this.shockMaterial.opacity = seconds < 0.15 ? seconds / 0.15 * 0.9 : Math.max(0, (0.8 - seconds) / 0.65) * 0.9;
@@ -299,172 +320,252 @@
     if (window.AFRAME && !AFRAME.components["nutrifrut-intro"]) {
       AFRAME.registerComponent("nutrifrut-intro", {
         init: function () {
-          this.root = null;
-          this.mode = "hidden";
-          this.time = 0;
-          this.blend = 1;
-          this.reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          this.root=null; this.mode="hidden"; this.time=0; this.charge=0;
+          this.reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+          this.framed=true;
         },
 
         build: function () {
-          if (this.root) return;
-          const T = AFRAME.THREE;
-          const finale = this.el.sceneEl.querySelector("#finaleFx").components["nutrifrut-finale"];
+          if(this.root) return;
+          const T=AFRAME.THREE, scene=this.el.sceneEl;
+          const finale=scene.querySelector("#finaleFx").components["nutrifrut-finale"];
           finale.build();
-          this.ownGeometries = new Set(); this.ownMaterials = new Set();
-          const material = color => {
-            const value = new T.MeshBasicMaterial({ color, transparent: true, depthWrite: false });
-            this.ownMaterials.add(value); return value;
+          this.geometries=new Set(); this.materials=new Set(); this.textures=new Set();
+          const mat=(color,opacity=1,lit=false)=>{
+            const m=lit ? new T.MeshStandardMaterial({color,roughness:.42,metalness:.12})
+              : new T.MeshBasicMaterial({color,transparent:opacity<1,opacity,depthWrite:opacity===1,side:T.DoubleSide});
+            this.materials.add(m); return m;
           };
-          const mesh = (geometry, mat, parent) => {
-            this.ownGeometries.add(geometry);
-            const value = new T.Mesh(geometry, mat); parent.add(value); return value;
+          const mesh=(g,m,parent)=>{this.geometries.add(g);const o=new T.Mesh(g,m);parent.add(o);return o;};
+          const instances=(geometry,material,poses,parent)=>{
+            this.geometries.add(geometry);const item=new T.InstancedMesh(geometry,material,poses.length),dummy=new T.Object3D();
+            poses.forEach((pose,i)=>{dummy.position.set(...pose.p);dummy.rotation.set(...(pose.r||[0,0,0]));dummy.scale.set(...(pose.s||[1,1,1]));dummy.updateMatrix();item.setMatrixAt(i,dummy.matrix);});
+            item.instanceMatrix.needsUpdate=true;parent.add(item);return item;
           };
-          this.root = new T.Group();
-          this.el.setObject3D("mesh", this.root);
-          this.target = this.el.parentEl;
-          this.root.add(new T.AmbientLight(0xffffff, 0.65));
-          const light = new T.DirectionalLight(0xffedd5, 1.6);
-          light.position.set(1, 2, 2); this.root.add(light);
+          this.root=new T.Group(); this.el.setObject3D("mesh",this.root);
+          this.target=this.el.parentEl;
+          this.root.add(new T.AmbientLight(0xffffff,1.05));
+          const light=new T.DirectionalLight(0xfff2d1,1.9); light.position.set(-1,2,3);this.root.add(light);
+          this.gold=mat(0xffe45c,.8); this.cyan=mat(0x38d9ed,.6);
+          this.auraMaterial=mat(0x38d9ed,.12);
+          const aura=mesh(new T.CircleGeometry(.38,48),this.auraMaterial,this.root);
+          aura.scale.y=.64;aura.position.set(0,-.09,.018);
 
-          // El afiche de prueba mide 596 × 842. Coordenadas relativas a su ancho.
-          this.halfHeight = 842 / 596 / 2;
-          this.frameMaterial = material(0x38bdf8);
-          this.cornerMaterial = material(0xfbbf24);
-          const x = 0.535, y = this.halfHeight + 0.035;
-          [-1, 1].forEach(side => {
-            const vertical = mesh(new T.PlaneGeometry(0.004, y * 2), this.frameMaterial, this.root);
-            vertical.position.set(side * x, 0, 0.025);
-            const horizontal = mesh(new T.PlaneGeometry(x * 2, 0.004), this.frameMaterial, this.root);
-            horizontal.position.set(0, side * y, 0.025);
-          });
-          [-1, 1].forEach(sx => [-1, 1].forEach(sy => {
-            const a = mesh(new T.PlaneGeometry(0.13, 0.012), this.cornerMaterial, this.root);
-            a.position.set(sx * (x - 0.06), sy * y, 0.027);
-            const b = mesh(new T.PlaneGeometry(0.012, 0.13), this.cornerMaterial, this.root);
-            b.position.set(sx * x, sy * (y - 0.06), 0.027);
-          }));
+          // Una estación central con volumen; el contorno del papel queda libre.
+          const shape=new T.Shape(),w=.46,h=.255,r=.06;
+          shape.moveTo(-w+r,-h);shape.lineTo(w-r,-h);shape.quadraticCurveTo(w,-h,w,-h+r);
+          shape.lineTo(w,h-r);shape.quadraticCurveTo(w,h,w-r,h);shape.lineTo(-w+r,h);
+          shape.quadraticCurveTo(-w,h,-w,h-r);shape.lineTo(-w,-h+r);shape.quadraticCurveTo(-w,-h,-w+r,-h);
+          const board=mesh(new T.ExtrudeGeometry(shape,{depth:.035,bevelEnabled:false,curveSegments:6}),mat(0x101c35),this.root);
+          board.position.set(0,-.09,.035);
+          const rim=mesh(new T.TorusGeometry(.28,.009,6,56),this.cyan,this.root);
+          rim.scale.set(1.38,.7,1);rim.position.set(0,-.09,.078);
+          this.rim=rim;
+          this.platform=new T.Group();this.platform.position.set(0,-.21,.12);
+          this.platform.rotation.x=Math.PI/2.3;this.root.add(this.platform);
+          mesh(new T.TorusGeometry(.28,.006,6,48),this.gold,this.platform);
+          mesh(new T.TorusGeometry(.22,.003,6,40),this.cyan,this.platform);
+          this.product=finale.product.clone(true);this.product.scale.setScalar(.32);
+          this.product.position.set(0,-.055,.23);this.root.add(this.product);
 
-          this.preview = new T.Group(); this.root.add(this.preview);
-          // Reutiliza geometrías y materiales del producto provisional del cierre.
-          this.product = finale.product.clone(true);
-          this.product.scale.setScalar(0.27);
-          this.product.position.set(0, -0.08, 0.15);
-          this.preview.add(this.product);
-          this.platform = new T.Group();
-          this.platform.position.set(0, -0.23, 0.13);
-          this.platform.rotation.x = Math.PI / 2.3;
-          this.preview.add(this.platform);
-          this.ringMaterial = material(0xfbbf24);
-          this.blueMaterial = material(0x38bdf8);
-          this.ringMaterial.opacity = 0.75; this.blueMaterial.opacity = 0.65;
-          mesh(new T.TorusGeometry(0.25, 0.003, 6, 40), this.ringMaterial, this.platform);
-          mesh(new T.TorusGeometry(0.19, 0.002, 6, 32), this.blueMaterial, this.platform);
-
-          this.ingredients = [];
-          const red = material(0xff3c6f), green = material(0x58bd49);
-          const yellow = material(0xffd648), brown = material(0x845335);
-          const strawberry = new T.Group();
-          const fruit = mesh(new T.SphereGeometry(0.071, 12, 10), red, strawberry);
-          fruit.scale.set(0.88, 1.16, 0.8);
-          for (let i = 0; i < 5; i++) {
-            const leaf = mesh(new T.ConeGeometry(0.025, 0.065, 3), green, strawberry);
-            const angle = i * Math.PI * 2 / 5;
-            leaf.position.set(Math.cos(angle) * 0.025, 0.063, Math.sin(angle) * 0.025);
-            leaf.rotation.z = Math.cos(angle) * 1.1;
+          const label=document.createElement("canvas");label.width=512;label.height=96;
+          const ctx=label.getContext("2d");ctx.fillStyle="#38d9ed";ctx.textAlign="center";
+          ctx.font="bold 27px Arial";ctx.fillText("ESTACIÓN DE RECARGA",256,44);
+          ctx.fillStyle="#ffffff";ctx.font="18px Arial";ctx.fillText("NUTRIFRUT",256,77);
+          const texture=new T.CanvasTexture(label);texture.colorSpace=T.SRGBColorSpace;this.textures.add(texture);
+          const labelMat=new T.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false});this.materials.add(labelMat);
+          const tag=mesh(new T.PlaneGeometry(.69,.13),labelMat,this.root);tag.position.set(0,.105,.081);
+          this.pips=[];
+          for(let i=0;i<8;i++) {
+            const m=mat(0x38d9ed,.16); const pip=mesh(new T.PlaneGeometry(.065,.017),m,this.root);
+            pip.position.set(-.28+i*.08,-.286,.081);this.pips.push(m);
           }
-          [[-0.027,0.027],[0.026,0.024],[-0.032,-0.011],[0,-0.017],[0.027,-0.028],[0,-0.055]].forEach(([px,py]) => {
-            const seed = mesh(new T.SphereGeometry(0.004, 5, 4), yellow, strawberry);
-            seed.position.set(px,py,0.052);
-          });
-          const banana = new T.Group();
-          const bananaBody = mesh(new T.TorusGeometry(0.074, 0.023, 6, 20, Math.PI * 0.95), yellow, banana);
-          bananaBody.rotation.z = Math.PI + 0.25;
-          const cap = mesh(new T.SphereGeometry(0.024, 6, 5), brown, banana);
-          cap.position.set(-0.068,-0.018,0);
-          const cereal = new T.Group();
-          mesh(new T.CylinderGeometry(0.003,0.003,0.22,5), green,cereal);
-          for (let i=0;i<4;i++) [-1,1].forEach(side => {
-            const grain = mesh(new T.SphereGeometry(0.019,6,5), yellow,cereal);
-            grain.scale.set(0.6,1.3,0.55);
-            grain.position.set(side*0.019,-0.06+i*0.041,0);
-            grain.rotation.z=side*-0.65;
-          });
-          const positions = [[-0.62,0.24],[0.62,-0.32],[0.59,0.57]];
-          [strawberry,banana,cereal].forEach((item,index) => {
-            item.position.set(positions[index][0],positions[index][1],0.06);
-            this.preview.add(item);
-            this.ingredients.push({item,y:positions[index][1],phase:index*2.1});
-          });
 
-          const count = 32;
-          const points = new Float32Array(count*3);
-          for(let i=0;i<count;i++) {
-            points[i*3]=(i%2 ? -1 : 1)*(0.56+Math.random()*0.09);
-            points[i*3+1]=(Math.random()-.5)*(this.halfHeight*2);
-            points[i*3+2]=0.04+Math.random()*0.06;
+          this.slots=[[-.57,.20],[.57,.20],[-.55,-.32],[.55,-.32],[0,.49],[0,-.52]];
+          this.ingredients=[];
+          const red=mat(0xff315e,1,true),green=mat(0x47c773,1,true),yellow=mat(0xffdf45,1,true),brown=mat(0x65402e,1,true);
+          const strawberry=new T.Group();
+          const berry=mesh(new T.SphereGeometry(.092,14,12),red,strawberry);berry.scale.set(.85,1.08,.8);
+          instances(new T.ConeGeometry(.027,.075,3),green,Array.from({length:5},(_,i)=>{
+            const a=i*Math.PI*2/5;return {p:[Math.cos(a)*.028,.084,Math.sin(a)*.028],r:[0,0,Math.cos(a)*1.1]};
+          }),strawberry);
+          instances(new T.SphereGeometry(.005,5,4),yellow,[[-.031,.036],[.032,.026],[-.036,-.012],[0,-.022],[.033,-.039],[0,-.068]].map(([x,y])=>({p:[x,y,.071]})),strawberry);
+          const banana=new T.Group();
+          const bananaBody=mesh(new T.TorusGeometry(.098,.030,8,24,Math.PI*.95),yellow,banana);
+          bananaBody.rotation.z=Math.PI+.25;
+          const cap=mesh(new T.SphereGeometry(.029,6,5),brown,banana);cap.position.set(-.089,-.024,0);
+          const cereal=new T.Group();mesh(new T.CylinderGeometry(.005,.005,.26,6),green,cereal);
+          instances(new T.SphereGeometry(.026,7,6),yellow,Array.from({length:10},(_,i)=>{
+            const side=i%2?-1:1;return {p:[side*.025,-.084+Math.floor(i/2)*.042,0],s:[.6,1.3,.55],r:[0,0,side*-.65]};
+          }),cereal);
+
+          [strawberry,banana,cereal].forEach((fruit,index)=>{
+            const item=new T.Group();this.root.add(item);
+            const socket=new T.Group();item.add(socket);
+            const disc=mesh(new T.CircleGeometry(.154,32),mat(0x101c35,.87),socket);disc.position.z=-.045;
+            const ring=mesh(new T.TorusGeometry(.156,.006,6,40),index===0?this.gold:this.cyan,socket);
+            ring.position.z=-.041;socket.add(fruit);
+            const beam=mesh(new T.SphereGeometry(.012,6,5),this.gold,this.root);beam.visible=false;
+            this.ingredients.push({item,fruit,socket,beam,index,slot:[0,1,5][index],phase:index*2.1,flight:null,scale:1});
+          });
+          this.rails=[];
+          this.slots.forEach(([x,y])=>{
+            const curve=new T.QuadraticBezierCurve3(new T.Vector3(x,y,.027),new T.Vector3(x*.6,y*.35,.06),new T.Vector3(0,-.09,.082));
+            const rail=mesh(new T.TubeGeometry(curve,12,.0025,4,false),mat(0x38d9ed,.23),this.root);
+            this.rails.push(rail);
+          });
+          const geometry=new T.BufferGeometry(),positions=new Float32Array(24*3);
+          for(let i=0;i<24;i++) {
+            const angle=i/24*Math.PI*2;positions[i*3]=Math.cos(angle)*.49;
+            positions[i*3+1]=-.09+Math.sin(angle)*.33;positions[i*3+2]=.04+(i%3)*.025;
           }
-          this.pointGeometry=new T.BufferGeometry();
-          this.pointGeometry.setAttribute("position",new T.BufferAttribute(points,3));
-          this.ownGeometries.add(this.pointGeometry);
-          this.pointMaterial=new T.PointsMaterial({color:0x38bdf8,size:0.007,transparent:true,opacity:.55,depthWrite:false});
-          this.ownMaterials.add(this.pointMaterial);
-          this.preview.add(new T.Points(this.pointGeometry,this.pointMaterial));
+          geometry.setAttribute("position",new T.BufferAttribute(positions,3));this.geometries.add(geometry);
+          this.pointMaterial=new T.PointsMaterial({color:0x38d9ed,size:.009,transparent:true,opacity:.65,depthWrite:false});this.materials.add(this.pointMaterial);
+          this.points=new T.Points(geometry,this.pointMaterial);this.root.add(this.points);
+          this.buttons=Array.from(document.querySelectorAll(".game-object"));
+          this.projectPoint=new T.Vector3();this.reset();
+        },
+
+        reset: function () {
+          this.charge=0;this.pulse=0;this.entrance=0;
+          this.ingredients.forEach((o,i)=>{o.slot=[0,1,5][i];o.flight=null;o.beam.visible=false;o.fruit.scale.setScalar(1);o.socket.visible=true;o.socket.children[0].visible=true;o.socket.children[1].visible=true;});
+          this.framed=true;this.candidate=null;this.checkAt=0;this.playFramed=undefined;this.playCandidate=null;
         },
 
         setMode: function (mode) {
-          this.mode=mode;
-          if(mode==="hidden" && !this.root) return;
+          if(mode==="hidden" && !this.root) {this.mode=mode;return;}
           this.build();
-          this.root.visible=mode!=="hidden";
-          if(mode==="preview") { this.blend=1; this.preview.scale.setScalar(1); this.preview.visible=true; }
-          if(mode==="preview") { this.lastFraming=undefined; this.checkFramingAt=0; }
+          if(mode==="preview" && this.mode!=="preview") this.reset();
+          this.mode=mode;this.root.visible=mode!=="hidden";
+          if(mode!=="playing") this.buttons.forEach(b=>{b.style.visibility="hidden";});
+          if(mode==="playing") this.syncButtons();
+        },
+
+        screen: function (point) {
+          const scene=this.el.sceneEl,rect=scene.canvas.getBoundingClientRect();
+          point.project(scene.camera);
+          return {x:rect.left+(point.x+1)*.5*rect.width,y:rect.top+(1-point.y)*.5*rect.height,z:point.z};
+        },
+
+        syncButtons: function () {
+          if(!this.buttons || this.mode!=="playing") return;
+          this.root.updateWorldMatrix(true,true);
+          const top=document.getElementById("hud").getBoundingClientRect().bottom+12;
+          this.ingredients.forEach((o,i)=>{
+            const p=this.screen(o.item.getWorldPosition(this.projectPoint));
+            const safe=p.z>=-1 && p.z<=1 && p.x>=36 && p.x<=innerWidth-36 && p.y>=top+36 && p.y<=innerHeight-72;
+            const button=this.buttons[i];button.style.visibility=safe && !o.flight && this.target.object3D.visible ? "visible":"hidden";
+            button.style.transform=`translate3d(${(p.x-34).toFixed(1)}px,${(p.y-34).toFixed(1)}px,0)`;
+            button.dataset.inView=safe?"yes":"no";
+          });
+        },
+
+        canPlay: function () {
+          if(!this.root || !this.target.object3D.visible) return false;
+          this.root.updateWorldMatrix(true,false);
+          const top=document.getElementById("hud").getBoundingClientRect().bottom+12;
+          const centers=this.ingredients.map(o=>{
+            const [x,y]=this.slots[o.slot];
+            return this.screen(this.root.localToWorld(new AFRAME.THREE.Vector3(x,y,.10)));
+          });
+          return centers.every(p=>p.z>=-1 && p.z<=1 && p.x>=40 && p.x<=innerWidth-40 && p.y>=top+40 && p.y<=innerHeight-76)
+            && centers.every((p,i)=>centers.every((q,j)=>i===j || Math.hypot(p.x-q.x,p.y-q.y)>=72));
+        },
+
+        checkPlayFraming: function () {
+          const valid=this.canPlay(),now=performance.now();
+          if(valid===this.playFramed) {this.playCandidate=null;return;}
+          if(this.playFramed===undefined) {this.playFramed=valid;this.el.emit("game-framing",{framed:valid});return;}
+          if(this.playCandidate!==valid) {this.playCandidate=valid;this.playCandidateAt=now;return;}
+          if(now-this.playCandidateAt<450) return;
+          this.playFramed=valid;this.playCandidate=null;this.el.emit("game-framing",{framed:valid});
+        },
+
+        collect: function (index,score) {
+          if(this.mode!=="playing" || document.hidden || !this.target.object3D.visible) return false;
+          const o=this.ingredients[index];if(!o || o.flight || this.buttons[index].dataset.inView!=="yes") return false;
+          o.flight={at:this.time,from:o.item.position.clone()};o.socket.visible=false;o.beam.visible=true;
+          this.buttons[index].style.visibility="hidden";
+          this.charge=Math.min(1,score/3000);this.pulse=1;
+          return true;
+        },
+
+        respawn: function (o) {
+          const used=new Set(this.ingredients.filter(item=>item!==o).map(item=>item.slot));
+          const previous=o.slot;
+          const available=this.slots.map((_,i)=>i).filter(i=>i!==previous && !used.has(i));
+          const safe=available.filter(i=>{o.slot=i;return this.canPlay();});o.slot=previous;
+          if(safe.length) o.slot=safe[Math.floor(Math.random()*safe.length)];
+          o.flight=null;o.beam.visible=false;
+          o.fruit.scale.setScalar(1);o.socket.visible=true;
+        },
+
+        checkFraming: function () {
+          const hud=document.getElementById("hud").getBoundingClientRect();
+          const panel=document.getElementById("introPanel").getBoundingClientRect();
+          this.root.updateWorldMatrix(true,false);
+          // Dos límites diferentes y permanencia de 900 ms evitan avisos alternantes.
+          const margin=this.framed?-12:12;
+          let inside=true;
+          [-1,1].forEach(sx=>[-1,1].forEach(sy=>{
+            const p=this.screen(this.root.localToWorld(this.projectPoint.set(sx*.74,sy*.71,.02)));
+            if(p.x<16+margin || p.x>innerWidth-16-margin || p.y<hud.bottom+8+margin || p.y>panel.top-8-margin || p.z<-1 || p.z>1) inside=false;
+          }));
+          if(inside===this.framed) {this.candidate=null;return;}
+          if(this.candidate!==inside) {this.candidate=inside;this.candidateAt=this.time;return;}
+          if(this.time-this.candidateAt<.9) return;
+          this.framed=inside;this.candidate=null;
+          this.el.emit("intro-framing",{framed:inside});
+        },
+
+        handoff: function () {
+          if(!this.root || !this.root.visible || !this.target.object3D.visible) return null;
+          this.product.updateWorldMatrix(true,false);
+          return this.product.matrixWorld.clone();
         },
 
         tick: function (time,delta) {
           if(!this.root || this.mode==="hidden" || document.hidden || !this.target.object3D.visible) return;
-          const dt=Math.min(64,delta||0)/1000;
-          this.time+=dt;
-          if(this.mode==="playing") this.blend=Math.max(0,this.blend-dt/0.4);
-          this.preview.visible=this.blend>0;
-          this.preview.scale.setScalar(this.blend);
-          const preview=this.mode==="preview";
-          if(preview && this.time>=(this.checkFramingAt||0)) {
-            this.checkFramingAt=this.time+.25;
-            const T=AFRAME.THREE, scene=this.el.sceneEl, rect=scene.canvas.getBoundingClientRect();
-            const hud=document.getElementById("hud").getBoundingClientRect();
-            const panel=document.getElementById("introPanel").getBoundingClientRect();
-            this.root.updateWorldMatrix(true,false);
-            let framed=true;
-            [-1,1].forEach(sx=>[-1,1].forEach(sy=>{
-              const point=this.root.localToWorld(new T.Vector3(sx*.71,sy*(this.halfHeight+.055),.02)).project(scene.camera);
-              const px=rect.left+(point.x+1)*.5*rect.width;
-              const py=rect.top+(1-point.y)*.5*rect.height;
-              if(px<10 || px>innerWidth-10 || py<hud.bottom+8 || py>panel.top-8 || point.z<-1 || point.z>1) framed=false;
-            }));
-            if(framed!==this.lastFraming) {
-              this.lastFraming=framed;
-              this.el.emit("intro-framing",{framed});
+          if(this.mode==="paused") {this.checkPlayFraming();return;}
+          const dt=Math.min(64,delta||0)/1000;this.time+=dt;
+          this.entrance=Math.min(1,this.entrance+dt/ .7);
+          const appear=this.reduced?1:1-Math.pow(1-this.entrance,3);
+          this.pulse=Math.max(0,this.pulse-dt*2.5);
+          this.product.scale.setScalar((.32+this.charge*.025+this.pulse*.018)*appear);
+          this.product.position.set(0,-.055+(this.reduced?0:Math.sin(this.time*1.2)*.008),.23);
+          this.product.rotation.set(.07,this.reduced?.08:Math.sin(this.time*.45)*.14,-.035);
+          this.auraMaterial.opacity=.10+this.charge*.13+this.pulse*.2;
+          this.cyan.opacity=.5+this.pulse*.35;
+          this.gold.opacity=.75+this.pulse*.2;
+          this.pips.forEach((m,i)=>{m.opacity=(i+1)/8<=this.charge ? .95:.16;});
+          if(!this.reduced) {this.platform.rotation.z=this.time*.15;this.points.rotation.z=Math.sin(this.time*.3)*.07;}
+          this.ingredients.forEach(o=>{
+            const [x,y]=this.slots[o.slot];
+            o.item.position.set(x,y+(this.reduced?0:Math.sin(this.time*1.3+o.phase)*.012),.10);
+            if(o.flight) {
+              const t=Math.min(1,(this.time-o.flight.at)/.42),ease=t*t*(3-2*t);
+              const end=new AFRAME.THREE.Vector3(0,-.055,.24);
+              o.beam.position.copy(o.flight.from).lerp(end,ease);o.beam.position.z+=Math.sin(t*Math.PI)*.14;
+              o.beam.scale.setScalar(1+Math.sin(t*Math.PI)*2);
+              // El ingrediente completo viaja al producto, junto a una chispa de energía.
+              o.item.position.copy(o.beam.position);o.socket.visible=true;
+              o.socket.children[0].visible=false;o.socket.children[1].visible=false;
+              o.fruit.scale.setScalar(1-t*.85);
+              if(t===1) {this.respawn(o);o.socket.children[0].visible=true;o.socket.children[1].visible=true;}
+            } else {
+              o.socket.children[0].visible=true;o.socket.children[1].visible=true;
+              o.socket.scale.setScalar(appear);
+              if(!this.reduced) o.fruit.rotation.set(.1,Math.sin(this.time*.6+o.phase)*.20,Math.sin(this.time*.5+o.phase)*.09);
             }
-          }
-          this.frameMaterial.opacity=preview ? .5+Math.sin(this.time*1.6)*.15 : .2;
-          this.cornerMaterial.opacity=preview ? .75+Math.sin(this.time*1.6)*.2 : .45;
-          if(!preview || this.reduced) return;
-          this.product.position.y=-.08+Math.sin(this.time*1.5)*.014;
-          this.product.rotation.set(.13,Math.sin(this.time*.65)*.38,-.07);
-          this.platform.rotation.z=this.time*.22;
-          this.ingredients.forEach(({item,y,phase})=>{
-            item.position.y=y+Math.sin(this.time*1.4+phase)*.018;
-            item.rotation.y=Math.sin(this.time*.8+phase)*.25;
-            item.rotation.z=Math.sin(this.time*.9+phase)*.12;
           });
+          if(this.mode==="preview" && this.time>=this.checkAt) {this.checkAt=this.time+.2;this.checkFraming();}
+          if(this.mode==="playing") {this.syncButtons();this.checkPlayFraming();}
         },
 
         remove: function () {
           if(!this.root) return;
           this.el.removeObject3D("mesh");
-          this.ownGeometries.forEach(item=>item.dispose());
-          this.ownMaterials.forEach(item=>item.dispose());
+          this.geometries.forEach(g=>g.dispose());this.materials.forEach(m=>m.dispose());this.textures.forEach(t=>t.dispose());
           this.root=null;
         }
       });
@@ -755,10 +856,54 @@
     #startGame:disabled { opacity:.45; cursor:default; }
     @media(max-height:480px) { #introPanel { width:min(320px,calc(100% - 32px)); padding:12px; } .intro-eyebrow { display:none; } #introInstruction { font-size:11px; margin-bottom:8px; } #startGame { min-height:40px; padding:10px; font-size:12px; } }
 
+    /* NF-14.1: controles compactos y zonas de toque que siguen la escena 3D. */
+    #hud { top:max(12px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));gap:6px; }
+    .counter {padding:9px 13px;border-radius:14px;font-size:16px;backdrop-filter:none;background:rgba(13,22,42,.88);}
+    #energy { border-left:3px solid #ffe45c;box-shadow:none; }
+    #status {padding:8px 12px;font-size:12px;border-radius:12px;backdrop-filter:none;background:rgba(13,22,42,.78);}
+    body.preview-mode #hud {grid-template-columns:1fr;padding-right:93px;}
+    body.preview-mode #energy,body.preview-mode #timer {display:none;}
+    #soundToggle {position:fixed;z-index:1300;right:max(12px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));
+      border:1px solid rgba(255,255,255,.22);border-radius:12px;background:rgba(13,22,42,.85);color:#fff;
+      height:36px;width:87px;padding:0;white-space:nowrap;font:700 10px Arial;touch-action:manipulation;cursor:pointer;}
+    body.playing-mode #soundToggle {top:auto;bottom:max(12px,env(safe-area-inset-bottom));}
+    body.reveal-mode #soundToggle,body.result-mode #soundToggle {display:none;}
+    #introPanel {bottom:calc(max(12px,env(safe-area-inset-bottom)) + 23px);width:min(380px,calc(100% - 24px));padding:13px 15px;border-radius:18px;background:rgba(13,22,42,.9);box-shadow:0 8px 25px rgba(0,0,0,.15);}
+    #introInstruction {margin-bottom:10px;font-size:12px;}
+    .intro-eyebrow {margin-bottom:5px;font-size:9px;}
+    #startGame {min-height:46px;border-radius:12px;}
+    #gameLayer {inset:0;width:100%;height:100%;}
+    .game-object {left:0;top:0;width:68px;height:68px;padding:0;display:block;background:transparent;border:0;border-radius:50%;color:#fff;gap:0;
+      transition:none;visibility:hidden;will-change:transform;}
+    .game-object .ingredient {display:none;}
+    .game-object span:last-child {position:absolute;top:54px;left:50%;transform:translateX(-50%);padding:3px 7px;
+      border-radius:7px;background:rgba(13,22,42,.85);border:1px solid rgba(56,217,237,.35);font-size:10px;white-space:nowrap;pointer-events:none;}
+    .game-object.collected {opacity:1;}
+    .game-object:nth-child(n) {border:0;box-shadow:none;}
+    .game-object:focus-visible {outline:2px solid #ffe45c;outline-offset:2px;}
+    #energyFlash {position:fixed;pointer-events:none;z-index:1100;left:50%;top:80px;transform:translateX(-50%);color:#ffe45c;font:bold 16px Arial;opacity:0;}
+    #energyFlash.pop {animation:energyPop .6s ease-out both;}
+    #timer.urgent {color:#ff8a93;border-color:#ff8a93;}
+    @keyframes energyPop {0%{opacity:0;transform:translate(-50%,8px);}20%{opacity:1;}100%{opacity:0;transform:translate(-50%,-18px);}}
+    body video {transition:filter 1.1s ease;}
+    #cinematicLayer:not([hidden]) {animation:cinemaFade 1.1s ease-out both;}
+    @keyframes cinemaFade {from{background-color:transparent;}to{background-color:rgba(3,8,18,.22);}}
+    #build {left:12px;right:auto;bottom:max(8px,env(safe-area-inset-bottom));font-size:9px;padding:4px 6px;opacity:.65;}
+    @media(max-height:480px) {
+      body.preview-mode #hud {max-width:calc(50% - 16px);padding-right:0;}
+      body.preview-mode #soundToggle {top:auto;bottom:12px;right:12px;}
+      #introPanel {left:auto;right:12px;bottom:56px;width:220px;padding:11px;}
+      #introInstruction {font-size:11px;}
+      #startGame {min-height:40px;font-size:12px;}
+      .counter {font-size:13px;padding:7px 10px;}#status {font-size:11px;padding:6px 10px;}
+      body.playing-mode #soundToggle {width:75px;height:30px;}
+    }
+    @media(prefers-reduced-motion:reduce) {body video{transition:none;}#cinematicLayer:not([hidden]),#energyFlash.pop {animation:none;}#energyFlash.pop{opacity:1;}}
+
   </style>
 </head>
 
-<body>
+<body class="preview-mode">
   <svg width="0" height="0" style="position:absolute;pointer-events:none" aria-hidden="true">
     <defs>
       <symbol id="icon-fresa" viewBox="0 0 64 64">
@@ -784,7 +929,9 @@
     </defs>
   </svg>
 
-  <div id="build">NF-13.1</div>
+  <button id="soundToggle" type="button" aria-pressed="true" aria-label="Desactivar sonido">SONIDO: ON</button>
+  <div id="energyFlash" aria-hidden="true"></div>
+  <div id="build">NF-14.1</div>
   <div id="hud">
     <p id="energy" class="counter">
       ENERGÍA: <span id="score">0</span>
@@ -801,7 +948,7 @@
   </div>
 
   <section id="introPanel" aria-label="Presentación del desafío">
-    <p class="intro-eyebrow">DESAFÍO NUTRIFRUT</p>
+    <p class="intro-eyebrow">ACTIVÁ TU ENERGÍA</p>
     <p id="introInstruction">Apuntá al afiche completo para activar el escenario.</p>
     <button id="startGame" type="button" disabled>INICIAR DESAFÍO</button>
   </section>
@@ -883,7 +1030,7 @@
         </div>
       </details>
       <button id="replay" type="button">JUGAR DE NUEVO</button>
-      <p class="result-footer">NUTRIFRUT · NF-13.1</p>
+      <p class="result-footer">NUTRIFRUT · NF-14.1</p>
     </div>
   </div>
 
@@ -907,7 +1054,11 @@
       imageTargetSrc: ./target/targets.mind;
       uiLoading: no;
       uiScanning: no;
-      uiError: no;"
+      uiError: no;
+      filterMinCF: 0.001;
+      filterBeta: 25;
+      warmupTolerance: 5;
+      missTolerance: 8;"
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false">
 
@@ -1341,6 +1492,8 @@
       function showFinalResult() {
         if (!finished) return;
         resultLayer.hidden = false;
+        document.body.classList.remove("reveal-mode");
+        document.body.classList.add("result-mode");
         openCompleteResult();
       }
 
@@ -1367,7 +1520,8 @@
         document.body.classList.add("cinema-mode");
         revealing = true;
         try {
-          component.start(completeReveal);
+          component.start(completeReveal,revealOrigin);
+          revealOrigin=null;
           revealButton.focus({ preventScroll: true });
         } catch (_) {
           // El resultado sigue accesible si un equipo no puede construir los efectos.
@@ -1392,11 +1546,14 @@
         const component=introEntity.components && introEntity.components["nutrifrut-intro"];
         if(component) {
           try { component.setMode(mode); }
-          catch (_) { /* El botón y el juego siguen disponibles sin efectos. */ }
+          catch (_) { status.textContent="No se pudo crear el escenario. Recargá la página."; return false; }
+          return true;
         }
       }
 
       function showIntro() {
+        document.body.classList.remove("playing-mode","result-mode","reveal-mode");
+        document.body.classList.add("preview-mode");
         introPanel.hidden=false;
         startButton.disabled=true;
         introInstruction.textContent="Apuntá al afiche completo para activar el escenario.";
@@ -1410,12 +1567,20 @@
         startButton.disabled=true;
         started=true;
         running=true;
+        document.body.classList.remove("preview-mode");
+        document.body.classList.add("playing-mode");
+        unlockAudio();
         lastTick=performance.now();
         introMode("playing");
-        status.textContent="Tocá los ingredientes para recuperar energía";
+        status.textContent="Tocá los ingredientes 3D y recargá la barra";
+        if(!stageComponent() || !stageComponent().canPlay()) {
+          pause();
+          status.textContent="Ajustá la distancia para ver y tocar los tres ingredientes.";
+          return;
+        }
         if(!showObjects()) {
           pause();
-          status.textContent="No hay espacio suficiente. Girá el celular para continuar.";
+          status.textContent="No se pudo mostrar el escenario. Recargá la página.";
           return;
         }
         frame=requestAnimationFrame(tick);
@@ -1429,86 +1594,66 @@
       introEntity.addEventListener("intro-framing",event=>{
         if(started || finished || failed || !introStable) return;
         introInstruction.textContent=event.detail.framed
-          ? "15 segundos. Tocá los ingredientes y sumá energía."
-          : "Alejá un poco la cámara para ver el afiche y su escenario completos.";
+          ? "15 segundos. Tocá los ingredientes que rodean el afiche."
+          : "Alejá un poco la cámara para ver la estación completa.";
       });
 
-      let slots = [];
-      const occupied = new Map();
-
-      function placeObject(button, slotIndex) {
-        const slot = slots[slotIndex];
-        occupied.set(button, slotIndex);
-        button.style.left = (slot.x + Math.random() * slot.extraX) + "px";
-        button.style.top = (slot.y + Math.random() * slot.extraY) + "px";
-      }
-
-      function positionObjects() {
-        gameLayer.style.top = Math.ceil(hud.getBoundingClientRect().bottom + 16) + "px";
-        const margin = 12;
-        const gap = 20;
-        const itemWidth = 82;
-        const itemHeight = 94;
-        const width = gameLayer.clientWidth - margin * 2;
-        const height = gameLayer.clientHeight - margin * 2;
-        const columns = Math.floor((width + gap) / (itemWidth + gap));
-        const rows = Math.floor((height + gap) / (itemHeight + gap));
-        slots = [];
-        occupied.clear();
-
-        if (columns < 1 || rows < 1 || columns * rows < objects.length) return false;
-
-        const cellWidth = (width - gap * (columns - 1)) / columns;
-        const cellHeight = (height - gap * (rows - 1)) / rows;
-        for (let row = 0; row < rows; row++) {
-          for (let column = 0; column < columns; column++) {
-            slots.push({
-              x: margin + column * (cellWidth + gap),
-              y: margin + row * (cellHeight + gap),
-              extraX: Math.max(0, cellWidth - itemWidth),
-              extraY: Math.max(0, cellHeight - itemHeight)
-            });
-          }
-        }
-
-        const available = slots.map((_, index) => index);
-        objects.forEach(button => {
-          const choice = Math.floor(Math.random() * available.length);
-          placeObject(button, available.splice(choice, 1)[0]);
-        });
-        return true;
-      }
-
-      function moveObject(button) {
-        const previous = occupied.get(button);
-        const used = new Set(occupied.values());
-        const available = slots.map((_, index) => index)
-          .filter(index => !used.has(index));
-        if (available.length) {
-          placeObject(button, available[Math.floor(Math.random() * available.length)]);
-        } else {
-          // En pantallas pequeñas intercambia posiciones sin superponer tarjetas.
-          const other = objects.find(item => item !== button);
-          const destination = occupied.get(other);
-          placeObject(button, destination);
-          placeObject(other, previous);
-        }
+      function stageComponent() {
+        return introEntity.components && introEntity.components["nutrifrut-intro"];
       }
 
       function hideObjects() {
-        gameLayer.hidden = true;
-        objects.forEach(button => { button.disabled = true; });
+        gameLayer.hidden=true;
+        objects.forEach(button=>{button.disabled=true;button.style.visibility="hidden";});
       }
 
       function showObjects() {
-        gameLayer.hidden = false;
-        if (!positionObjects()) {
-          hideObjects();
-          return false;
-        }
-        objects.forEach(button => { button.disabled = busy.has(button); });
+        const component=stageComponent();
+        if(!component || !component.root) {hideObjects();return false;}
+        gameLayer.hidden=false;
+        objects.forEach(button=>{button.disabled=busy.has(button);});
+        component.syncButtons();
         return true;
       }
+
+      const soundButton=document.getElementById("soundToggle");
+      const energyFlash=document.getElementById("energyFlash");
+      let soundEnabled=true, audio=null, flashTimeout=null, revealOrigin=null;
+      function unlockAudio() {
+        if(!soundEnabled) return;
+        try {
+          const Audio=window.AudioContext || window.webkitAudioContext;
+          if(!audio && Audio) audio=new Audio();
+          if(audio && audio.state==="suspended") audio.resume().catch(()=>{});
+        } catch (_) { /* El juego funciona también sin audio. */ }
+      }
+      function playTone(index) {
+        if(!soundEnabled || !audio || audio.state!=="running" || document.hidden) return;
+        try {
+          const oscillator=audio.createOscillator(),gain=audio.createGain(),at=audio.currentTime;
+          oscillator.type="sine";oscillator.frequency.setValueAtTime([620,780,940][index],at);
+          oscillator.frequency.exponentialRampToValueAtTime([930,1170,1410][index],at+.12);
+          gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(.045,at+.015);
+          gain.gain.exponentialRampToValueAtTime(.0001,at+.18);
+          oscillator.connect(gain);gain.connect(audio.destination);oscillator.start(at);oscillator.stop(at+.2);
+          oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};
+        } catch (_) {}
+      }
+      soundButton.addEventListener("click",()=>{
+        soundEnabled=!soundEnabled;
+        soundButton.textContent=soundEnabled?"SONIDO: ON":"SONIDO: OFF";
+        soundButton.setAttribute("aria-pressed",String(soundEnabled));
+        soundButton.setAttribute("aria-label",soundEnabled?"Desactivar sonido":"Activar sonido");
+        if(soundEnabled) unlockAudio();
+      });
+
+      introEntity.addEventListener("game-framing",event=>{
+        if(!started || finished || failed || document.hidden) return;
+        if(!event.detail.framed) {
+          pause();
+          status.textContent="Ajustá la distancia para ver y tocar los tres ingredientes.";
+        } else if(!running) scheduleStart();
+      });
 
       let ready = false;
       let targetVisible = false;
@@ -1526,6 +1671,7 @@
         const seconds = Math.ceil(remaining / 1000);
         const label = seconds + " s";
 
+        timer.classList[remaining>0 && remaining<=5000 ? "add":"remove"]("urgent");
         if (timer.textContent.trim() !== label) {
           timer.textContent = label;
           timer.setAttribute(
@@ -1544,6 +1690,8 @@
         collectionTimers.forEach(id => clearTimeout(id));
         collectionTimers.clear();
         busy.clear();
+        clearTimeout(flashTimeout);
+        energyFlash.classList.remove("pop");
         objects.forEach(button => {
           button.classList.remove("collected");
           button.disabled = true;
@@ -1566,7 +1714,10 @@
         clearCollectionEffects();
         introPanel.hidden=true;
         startButton.disabled=true;
+        revealOrigin=stageComponent() ? stageComponent().handoff() : null;
         introMode("hidden");
+        document.body.classList.remove("playing-mode","preview-mode");
+        document.body.classList.add("reveal-mode");
         finalScore.textContent = score + " pts";
         resultMessage.textContent = NUTRIFRUT_CONFIG.brandMessage;
         status.textContent = "Partida terminada";
@@ -1602,6 +1753,7 @@
 
       function pause() {
         hideObjects();
+        if(started && !finished) introMode("paused");
         if (!running) return;
 
         consumeTime();
@@ -1627,11 +1779,11 @@
           pendingStart=null;
           if(!targetVisible || document.hidden || finished || failed || !ready) return;
           if(!started) {
+            if(!introMode("preview")) return;
             introStable=true;
             startButton.disabled=false;
-            introMode("preview");
-            introInstruction.textContent="15 segundos. Tocá los ingredientes y sumá energía.";
-            status.textContent="Escenario listo. Iniciá cuando quieras.";
+            introInstruction.textContent="15 segundos. Tocá los ingredientes que rodean el afiche.";
+            status.textContent="Estación lista";
             return;
           }
           runGame();
@@ -1733,21 +1885,27 @@
           return;
         }
 
+        const index=objects.indexOf(button),points=Number(button.dataset.points);
+        const component=stageComponent();
+        if(!component || !component.collect(index,score+points)) return;
         busy.add(button);
         button.disabled = true;
-        score += Number(button.dataset.points);
+        score += points;
+        playTone(index);
+        clearTimeout(flashTimeout);
+        energyFlash.textContent="+"+points+" ENERGÍA";
+        energyFlash.classList.remove("pop");void energyFlash.offsetWidth;energyFlash.classList.add("pop");
+        flashTimeout=setTimeout(()=>energyFlash.classList.remove("pop"),600);
         scoreElement.textContent = String(score);
         button.classList.add("collected");
 
         const collectionTimer = setTimeout(() => {
           collectionTimers.delete(collectionTimer);
-          if (running && targetVisible && !finished && !failed &&
-              !document.hidden && !gameLayer.hidden) moveObject(button);
           busy.delete(button);
           button.classList.remove("collected");
           button.disabled = !running || !targetVisible || finished ||
             failed || document.hidden || gameLayer.hidden;
-        }, 250);
+        }, 550);
         collectionTimers.add(collectionTimer);
       }
 
@@ -1797,7 +1955,7 @@
         if (running) {
           if (!showObjects()) {
             pause();
-            status.textContent = "No hay espacio suficiente. Girá el celular para continuar.";
+            status.textContent = "No se pudo mostrar el escenario. Recargá la página.";
           }
         } else if (targetVisible && ready && !finished && !failed && !document.hidden) {
           scheduleStart();
