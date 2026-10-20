@@ -79,7 +79,7 @@
   gap:12px;
   border-radius:16px}
 
-.balanced-experience .clean-result .purchase-link span {
+.balanced-experience .clean-result .purchase-link span[aria-hidden] {
   font-size:22px;
   font-weight:600}
 

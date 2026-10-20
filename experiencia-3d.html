@@ -4,9 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#ffffff">
+  <meta name="nf-release" content="final-rays-20261020-4">
   <meta name="description" content="Escanea el afiche, arma combinaciones en 30 segundos y descubre tu recarga Nutrifruit.">
-  <title>Nutrifruit · Escanea y recárgate</title>
-  <link rel="stylesheet" href="./style.css?v=8"><link rel="stylesheet" href="./combo.css?test=1"><link rel="stylesheet" href="./journey.css?journey=1"><link rel="stylesheet" href="./brand-white.css?brand=1"><link rel="stylesheet" href="./balanced-ui.css?rank=2">
+  <title>Nutrifruit · Escanea, juega y recárgate</title>
+  <link rel="stylesheet" href="./style.css?v=8"><link rel="stylesheet" href="./combo.css?test=1"><link rel="stylesheet" href="./journey.css?journey=1"><link rel="stylesheet" href="./brand-white.css?brand=1"><link rel="stylesheet" href="./balanced-ui.css?rank=3">
   <!-- COLORES: edita colores.css. Se carga al final para controlar el tema. -->
   <link rel="stylesheet" href="./colores.css?v=3">
   <link rel="stylesheet" href="./experience-clean.css?v=2">
@@ -19,13 +20,14 @@
   <button id="sound-toggle" class="sound-toggle" type="button" aria-label="Sonido" aria-pressed="true" title="Silenciar sonido" hidden>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><g class="sound-on"><path d="M15 8a6 6 0 0 1 0 8 M18 5a10 10 0 0 1 0 14"/></g><g class="sound-off"><path d="m15 9 6 6 m0-6-6 6"/></g></svg>
   </button>
+  <!-- EDITAR INICIO: cambia aquí el título y la descripción de bienvenida -->
   <!-- PANTALLA 1: bienvenida y acceso a la cámara. -->
   <main id="intro" class="intro">
     <header class="masthead"><div class="brand-lockup"><img class="manufacturer-logo" src="./assets/marca/logotipo.webp" alt="Bolivia’s Fruit"><span class="product-brand">Nutrifruit</span></div><span class="tag">ESCANEA Y RECÁRGATE</span></header>
     <section class="camera-intro">
       <span class="eyebrow">ESCANEA Y RECÁRGATE</span>
-      <h1>Permite la cámara<br>y apunta al afiche.</h1>
-      <p>Completa combinaciones de ingredientes durante 30 segundos. Guarda tu mejor marca en el top 10.</p>
+      <h1>Permite la cámara<br>y apunta al afiche</h1>
+      <p>Atrapa ingredientes, enciende los rayos y compite por el top 10</p>
       <button id="start" class="button primary" hidden disabled>Permitir cámara</button>
       <button id="intro-ranking" class="text-button">Ver top 10</button>
       <p id="intro-note" class="note" role="status">Preparando el acceso a la cámara…</p>
@@ -43,7 +45,7 @@
     </div>
   </section>
   <!-- PANTALLA 3: puntos, reloj, batería y combinaciones. -->
-  <section id="game-ui" class="game-ui" hidden aria-label="Arma tu recarga, juego de prueba">
+  <section id="game-ui" class="game-ui" hidden aria-label="Arma tu recarga, juego de 30 segundos">
     <header class="game-top"><div><span class="game-brand"><img src="./assets/marca/simbolo.webp" alt="" aria-hidden="true"><span class="eyebrow">TU RECARGA</span></span><p><strong id="game-score">0</strong> <span>puntos</span></p></div><div class="game-clock"><strong id="game-timer">30</strong><span>segundos</span></div><button id="exit-game" class="small-button">Salir</button></header>
     <div class="energy-track" role="progressbar" aria-label="Carga de la batería" aria-valuemin="5" aria-valuemax="100" aria-valuenow="5" id="energy-track"><div id="energy-fill"></div></div>
     <p class="game-instruction">Toca solo lo que falta en tu combinación.</p>
@@ -62,6 +64,7 @@
   </section>
   <!-- PANTALLA 4: explosión 3D. Colores de partículas: product-burst.js. -->
   <section id="reveal-ui" class="reveal-ui" hidden aria-label="Descubrimiento de Nutrifruit"><header><div class="brand-lockup"><img class="manufacturer-logo" src="./assets/marca/logotipo.webp" alt="Bolivia’s Fruit"><span class="product-brand">Nutrifruit</span></div><span class="tag">ESCANEA Y RECÁRGATE</span></header><div id="reveal-effects" class="reveal-effects" aria-hidden="true"></div><div id="reveal-field" class="reveal-field"></div><div class="reveal-caption"><p id="reveal-line" aria-live="polite">Tu recarga toma forma…</p><div id="reveal-outcome" role="status" aria-live="polite" aria-atomic="true" hidden><strong id="outcome-title"></strong><span id="outcome-subtitle"></span></div><button id="skip-reveal" class="small-button" hidden>Ver producto</button></div></section>
+  <!-- EDITAR CTA: los textos y el enlace se cambian en textos.js, bloque cierre -->
   <!-- PANTALLA 5: producto, tienda, nombre de usuario y competencia. -->
   <section id="result-ui" class="result-ui clean-result" hidden aria-label="Producto y tienda online">
     <header class="masthead"><img class="manufacturer-logo" src="./assets/marca/logotipo.webp" alt="Bolivia’s Fruit"></header>
@@ -69,11 +72,11 @@
     <!-- VISOR 3D: espacio exclusivo. CTA y formulario continúan debajo. -->
     <div id="product-stage" role="img" aria-label="Barra Nutrifruit con ingredientes 3D en órbita" hidden></div>
     <div class="result-bottom">
-      <a id="store-link" class="button purchase-link" href="https://boliviasfruit.com/categoria-producto/frutosdeshidratados/" target="_blank" rel="noopener noreferrer">Adquiere Nutrifruit <span aria-hidden="true">↗</span></a>
+      <a id="store-link" class="button purchase-link" href="https://boliviasfruit.com/categoria-producto/frutosdeshidratados/" target="_blank" rel="noopener noreferrer"><span id="store-label">Adquiere Nutrifruit</span> <span aria-hidden="true">↗</span></a>
       <p class="result-score"><strong id="final-score">0</strong> <span>puntos</span></p>
       <!-- NOMBRE AUTOMÁTICO: el formulario aparece al llegar al resultado. -->
       <form id="save-form" class="save-form" hidden>
-        <div class="alias-heading"><label for="nickname">Tu nombre en el ranking</label><span id="nickname-count">0/12</span></div>
+        <div class="alias-heading"><label id="nickname-label" for="nickname">Tu nombre en el ranking</label><span id="nickname-count">0/12</span></div>
         <div class="save-row"><input id="nickname" name="nickname" type="text" minlength="3" maxlength="12" pattern="[A-Za-zÁÉÍÓÚáéíóúÑñÜü][A-Za-z0-9ÁÉÍÓÚáéíóúÑñÜü_]{2,11}" placeholder="Ej. Leo87" aria-describedby="nickname-help nickname-count" autocomplete="nickname" autocapitalize="none" spellcheck="false" required><button id="save-score" class="button primary" type="submit">Guardar y competir</button></div>
         <p id="nickname-help">3–12 caracteres. Tu alias quedará fijo y será público.</p>
       </form>
@@ -83,7 +86,7 @@
         <h3 id="ranking-preview-title">Ranking</h3>
         <ol id="ranking-preview-rows" aria-label="Primeros tres puestos" hidden></ol>
         <p id="ranking-preview-status" role="status">Cargando posiciones…</p>
-        <button id="result-ranking" class="text-button ranking-more" type="button" aria-label="Ver más: ranking completo de diez puestos">Ver más <span aria-hidden="true">→</span></button>
+        <button id="result-ranking" class="text-button ranking-more" type="button" aria-label="Ver más: ranking completo de diez puestos"><span id="ranking-more-label">Ver más</span> <span aria-hidden="true">→</span></button>
       </section>
       <p id="save-status" class="save-status" role="status" hidden></p>
       <button id="play-again" class="text-button">Volver a jugar</button>
@@ -99,7 +102,7 @@
   </section>
   <section id="error-panel" class="error-panel" hidden role="alert"><div><span class="eyebrow">NO SE PUDO INICIAR</span><h2 id="error-title">Revisa el acceso a la cámara</h2><p id="error-message"></p><p id="error-detail" class="note"></p><button id="retry" class="button primary">Volver al inicio</button></div></section>
   <script type="module">
-    import('./burst-app.js?outcome=6').catch(()=>{const button=document.querySelector('#start');button.textContent='Recargar página';button.hidden=false;button.disabled=false;button.onclick=()=>location.reload();document.querySelector('#intro-note').textContent='No se completó la carga. Comprueba tu conexión y vuelve a intentarlo.';});
+    import('./burst-app.js?final=4').catch(()=>{const button=document.querySelector('#start');button.textContent='Recargar página';button.hidden=false;button.disabled=false;button.onclick=()=>location.reload();document.querySelector('#intro-note').textContent='No se completó la carga. Comprueba tu conexión y vuelve a intentarlo.';});
   </script>
 </body>
 </html>

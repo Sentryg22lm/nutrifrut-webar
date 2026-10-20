@@ -1,4 +1,4 @@
-export const COMBO_RULES=Object.freeze({version:'balanced-v1',maxScore:4000,durationMs:30000,points:10,bonus:30,minReactionMs:80,minGapMs:75,chargeHits:48});
+export const COMBO_RULES=Object.freeze({version:'balanced-v2',maxScore:4000,durationMs:30000,points:10,bonus:30,minReactionMs:80,minGapMs:75,chargeHits:48});
 export function comboSchedule(seed){
   let value=Math.trunc(Number(seed))%2147483647;if(value<=0)value=1;
   const next=()=>{value=value*48271%2147483647;return value/2147483647;};
@@ -35,4 +35,27 @@ export function comboEnergy(state){return Math.min(100,5+Math.floor(Math.max(0,s
 export function advanceTravel(speed,target,deltaMs){
  const delta=Math.max(0,deltaMs),decay=Math.exp(-delta/650);
  return {speed:target+(speed-target)*decay,distance:target*delta+(speed-target)*650*(1-decay)};
+}
+
+// RITMO COMPETITIVO: tiempo activo, sin consumir las pausas
+// 0–8 s: cómodo; 8–20 s: sube gradualmente; 20–25 s: presión; 25–30 s: cierre
+// IMPORTANTE: estos valores también los valida Supabase; no editarlos solo aquí
+export const TIMING_STEPS=Object.freeze([
+  Object.freeze({atMs:0,factor:1}),
+  Object.freeze({atMs:8000,factor:1.025}),
+  Object.freeze({atMs:14000,factor:1.05}),
+  Object.freeze({atMs:20000,factor:1.08}),
+  Object.freeze({atMs:25000,factor:1.12}),
+  Object.freeze({atMs:27000,factor:1.15}),
+]);
+export function timingFactor(elapsedMs){return TIMING_STEPS.reduce((factor,step)=>elapsedMs>=step.atMs?step.factor:factor,1);}
+// Divide en límites exactos: un mismo recorrido a 30/60 fps y en el servidor
+export function advanceTimedTravel(speed,baseTarget,fromMs,toMs){
+  let at=Math.max(0,fromMs),distance=0,current=speed;const end=Math.max(at,toMs);
+  while(at<end){
+    const next=TIMING_STEPS.find(step=>step.atMs>at)?.atMs??end;
+    const until=Math.min(end,next),part=advanceTravel(current,baseTarget*timingFactor(at),until-at);
+    distance+=part.distance;current=part.speed;at=until;
+  }
+  return {speed:current,distance};
 }

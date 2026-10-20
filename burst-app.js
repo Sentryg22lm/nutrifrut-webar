@@ -1,17 +1,19 @@
-import { openCamera } from './camera.js';
+import { openCamera } from './camera.js?v=2';
 import { CONFIG } from './config-current.js?rank=1';
 import { ranking } from './ranking-current.js?rank=1';
-import { COMBO_RULES as RULES } from './balanced-rules.js?rank=1';
-import { playRound } from './balanced-play.js?rank=1';
+import { COMBO_RULES as RULES } from './balanced-rules.js?timing=2';
+import { playRound } from './balanced-play.js?timing=2';
 import { nicknameError, normalizeNickname, NICKNAME_MAX } from './nickname-policy.js?v=2';
-import {createPortalScene} from './portal-stable.js?stable=2';
+import {createGameEnergy} from './game-energy.js?v=3';
+import {createRevealPortal} from './reveal-portal.js?v=1';
 import {createPoseStabilizer} from './pose-stabilizer.js?stable=1';
 import {createProductBurst} from './product-burst.js?burst=1';
 import { TARGET } from './target-layout.js?v=1';
 import { fitProductCamera } from './product-viewer-fit.js?v=2';
-import {positionCenteredReveal} from './centered-reveal.js?v=2';
+import {positionEnergyReveal,ENERGY_ORIGIN} from './energy-reveal.js?v=1';
 import {createExperienceAudio} from './experience-audio.js?v=1';
-import {roundOutcome} from './round-outcome.js?v=1';
+import {roundOutcome} from './round-outcome.js?v=2';
+import {TEXTOS} from './textos.js';
 
 const $ = id => document.getElementById(id);
 let state = 'intro', operation = 0, session = null, viewer = null;
@@ -60,6 +62,9 @@ function failure(error, stage = 'camera') {
   } else if (name === 'CameraTimeoutError') {
     title = 'La cámara no entregó imagen';
     message = 'Vuelve a intentarlo desde Safari o Chrome. Comprueba que el navegador tenga permiso para utilizar la cámara.';
+  } else if (name === 'WebGLContextLostError') {
+    title = 'Se interrumpieron los gráficos';
+    message = 'Cierra otras pestañas y vuelve a activar la experiencia.';
   } else if (stage === 'product') {
     title = 'No se pudo mostrar el empaque';
     message = 'El navegador no pudo iniciar los gráficos 3D. Vuelve a intentarlo en Safari o Chrome.';
@@ -79,7 +84,7 @@ async function loadEngine() {
         import('./vendor/OrbitControls.js'),
         import('./model.js'),
         import('./battery-contour.js?v=3'),
-        import('./combo-surface.js?outcome=2'),
+        import('./combo-surface.js?motion=3'),
       ]);
       THREE = three; MindARThree = ar.MindARThree; OrbitControls = controls.OrbitControls; makeRecharge=scene.createBatteryContour;makeARGame=arGame.createIngredientSurface;
       product = product || await model.createPackaging();
@@ -109,14 +114,14 @@ function lights(scene) {
 function disposeRun(run) {
   if (!run) return;
   run.closed = true;
-  run.revealRoot?.removeFromParent();
-  run.surface?.dispose();run.recharge?.dispose();run.portal?.dispose();run.pose?.dispose();
+  run.restoreReveal?.();run.revealPortal?.dispose();run.revealRoot?.removeFromParent();
+  run.surface?.dispose();run.recharge?.dispose();run.energy?.dispose();run.pose?.dispose();run.revealAnchor?.removeFromParent();
   clearTimeout(run.hintTimer); clearTimeout(run.startTimer); clearTimeout(run.permissionTimer);
   const ar = run.ar;
   if (ar) {
     ar.renderer.setAnimationLoop(null);
-    ar.controller?.stopProcessVideo();
-    ar.renderer.dispose();
+    ar.controller?.stopProcessVideo();ar.controller?.dispose?.();ar.controller?.worker?.terminate?.();
+    ar.renderer.dispose();ar.renderer.forceContextLoss?.();
     ar.video = null;
   }
   run.stream?.getTracks().forEach(track => track.stop());
@@ -165,6 +170,7 @@ async function startAR() {
     });
     clearTimeout(run.permissionTimer);
     Object.assign(run, opened);
+    run.stream.getVideoTracks?.().forEach(track=>track.addEventListener('ended',()=>{if(current()){home();failure(Object.assign(new Error('La cámara se interrumpió. Vuelve a activarla.'),{name:'NotReadableError'}));}},{once:true}));
     if (!current()) { disposeRun(run); return; }
     // Show the live camera before downloading or starting the AR engine.
     $('scan-heading').textContent = 'Cámara activa';
@@ -201,6 +207,7 @@ async function attachTracking(run) {
     };
     const resize = ar.resize.bind(ar);
     ar.resize = () => { if (ar.controller && ar.video?.videoWidth) resize(); };
+    ar.renderer.domElement.addEventListener('webglcontextlost',event=>{event.preventDefault();if(current()){home();failure(Object.assign(new Error('El teléfono interrumpió los gráficos. Cierra otras pestañas e inténtalo otra vez.'),{name:'WebGLContextLostError'}));}},{once:true});
     ar.renderer.domElement.style.zIndex = '1';
     ar.renderer.domElement.style.touchAction = 'none';
     ar.cssRenderer.domElement.style.zIndex = '2';
@@ -211,12 +218,12 @@ async function attachTracking(run) {
     anchor.onTargetUpdate=()=>pose.sample(anchor.group.matrix,anchor.visible,performance.now());
     const recharge=makeRecharge();run.recharge=recharge;
     pose.group.add(recharge.group);
-    run.portal=createPortalScene();pose.group.add(run.portal.group);
-    run.surface=await makeARGame({anchor:pose.group,camera:ar.camera,renderer:ar.renderer,field:$('game-field'),images:CONFIG.ingredientImages,reducedMotion,rechargePoint:[...TARGET.batteryCenter,.01]});
+    run.energy=createGameEnergy({lowPower:(navigator.deviceMemory||8)<=4});pose.group.add(run.energy.group);
+    run.surface=await makeARGame({anchor:pose.group,camera:ar.camera,renderer:ar.renderer,field:$('game-field'),images:CONFIG.ingredientImages,reducedMotion,rechargePoint:ENERGY_ORIGIN,onCollect:hit=>run.energy.collect(hit)});
     if(!current()){disposeRun(run);return;}
     anchor.onTargetFound = () => {
-      if (!current()) return;
-      if(!run.seen){run.portal.open();run.recharge.open();}run.seen = true;run.tracked=true; targetVerified=true; clearTimeout(run.hintTimer);
+      if (!current()||run.ar!==ar) return;
+      if(!run.seen){run.energy.open();run.recharge.open();}run.seen = true;run.tracked=true; targetVerified=true; clearTimeout(run.hintTimer);
       $('scan-frame').hidden = true;
       $('scan-heading').textContent = 'Tu recarga comienza aquí';
       $('scan-status').textContent = 'Arma la combinación que aparece arriba. Toca solo lo que falta. Tienes 30 segundos.';
@@ -224,26 +231,28 @@ async function attachTracking(run) {
       renderScanState();syncTrackingPause();
     };
     anchor.onTargetLost = () => {
-      if (!current()) return;
+      if (!current()||run.ar!==ar) return;
       run.tracked=false;pose.reset();syncTrackingPause();renderScanState();
       $('scan-frame').hidden = false;
       $('scan-heading').textContent = 'Vuelve a apuntar al afiche';
       $('scan-status').textContent = 'Mantén el afiche completo a la vista para comenzar y jugar.';
     };
+    const pendingStart=ar.start();
+    pendingStart.then(()=>{if(!current()||run.ar!==ar){ar.controller?.stopProcessVideo();ar.controller?.dispose?.();ar.controller?.worker?.terminate?.();}},()=>{});
     await Promise.race([
-      ar.start(),
+      pendingStart,
       new Promise((_, reject) => { run.startTimer = setTimeout(() => reject(new Error('El reconocimiento tardó demasiado en iniciar.')), 35000); }),
     ]);
     clearTimeout(run.startTimer);
     if (!current() || run.ar !== ar) { ar.controller?.stopProcessVideo(); return; }
     $('scan-heading').textContent = run.seen ? 'Afiche reconocido' : 'Apunta al afiche';
-    if (!run.seen) $('scan-status').textContent = 'Encuadra el diseño completo y mantén el teléfono quieto.';
+    if (!run.seen) $('scan-status').textContent = 'Encuadra el afiche dejando espacio a los lados para ver la energía.';
     renderScanState();
     const began = performance.now();
     ar.renderer.setAnimationLoop(() => {
       const t = (performance.now() - began) / 1000;
       pose.update(performance.now());
-      recharge.update(t,reducedMotion,state==='game');run.portal.update(t,reducedMotion,state==='game');
+      run.energy.update(t,reducedMotion,!document.hidden&&(state!=='game'||run.tracked));recharge.setCharge(run.energy.deliveredCharge);recharge.update(t,reducedMotion,state==='game');
       updateGameSound();
       ar.renderer.render(ar.scene, ar.camera);
     });
@@ -252,9 +261,9 @@ async function attachTracking(run) {
     },18000);
   } catch (error) {
     clearTimeout(run.startTimer);
-    if (ar) { ar.controller?.stopProcessVideo(); ar.renderer.setAnimationLoop(null); ar.renderer.dispose(); ar.renderer.domElement.remove(); ar.cssRenderer.domElement.remove(); ar.video = null; }
+    if (ar) { ar.controller?.stopProcessVideo();ar.controller?.dispose?.();ar.controller?.worker?.terminate?.(); ar.renderer.setAnimationLoop(null); ar.renderer.dispose(); ar.renderer.domElement.remove(); ar.cssRenderer.domElement.remove(); ar.video = null; }
     run.ar = null;
-    run.surface?.dispose();run.surface=null;run.recharge?.dispose();run.recharge=null;run.portal?.dispose();run.portal=null;run.pose?.dispose();run.pose=null;
+    run.surface?.dispose();run.surface=null;run.recharge?.dispose();run.recharge=null;run.energy?.dispose();run.energy=null;run.pose?.dispose();run.pose=null;
     if (current()) {
       $('scan-heading').textContent = 'La cámara funciona';
       $('scan-status').textContent = `No inició el reconocimiento. ${error?.message || 'Revisa la conexión.'}`;
@@ -299,46 +308,53 @@ function showProduct() {
   } catch (error) { stopViewer();activeBurst?.dispose();activeBurst=null; failure(error,'product'); }
 }
 
-// REVELACIÓN: explosión de ingredientes y transición al producto final.
+// CIERRE: 2 s de convergencia y 4,5 s de explosión / producto / resultado.
 function revealProduct(run,ticket) {
   screen('reveal');sound.setPaused(document.hidden);sound.revealCharge();
-  // CIERRE: el resultado ocupa los últimos dos segundos de la revelación.
-  const duration=reducedMotion?2200:4500,outcomeAt=duration-2000;
+  const convergeMs=reducedMotion?500:2000,duration=reducedMotion?2200:4500,outcomeAt=duration-2000;
   const outcome=roundOutcome(lastRound?.energy??5);
   $('outcome-title').textContent=outcome.title;$('outcome-subtitle').textContent=outcome.subtitle;
   $('reveal-outcome').hidden=true;$('reveal-line').hidden=false;
-  const began=performance.now(),effects=$('reveal-effects');effects.replaceChildren();
-  activeBurst?.dispose();activeBurst=createProductBurst();burstOrigin=began;
-  run.recharge.setReveal(true);
-  // CENTRO DE PANTALLA: la revelación deja de depender del lado de la batería.
-  const root=new THREE.Group();run.revealRoot=root;run.ar.scene.add(root);
-  positionCenteredReveal(root,run.ar.camera);
+  const effects=$('reveal-effects');effects.replaceChildren();run.surface.clear();
+  // Congela la última pose válida: cámara abierta, sin perder el origen al moverse.
+  run.pose?.update(performance.now());run.anchor.group.updateWorldMatrix(true,false);
+  const frozen=new THREE.Group();frozen.matrixAutoUpdate=false;frozen.matrix.copy(run.anchor.group.matrixWorld);run.ar.scene.add(frozen);run.revealAnchor=frozen;
+  frozen.add(run.energy.group,run.recharge.group);
+  run.energy.setRevealAge(0);run.recharge.setReveal(true);
+  activeBurst?.dispose();activeBurst=createProductBurst({count:(navigator.deviceMemory||8)<=4?18:24});
+  const root=new THREE.Group();run.revealRoot=root;run.ar.scene.add(root);root.visible=false;
   activeBurst.group.position.set(0,0,0);root.add(activeBurst.group);
+  run.revealPortal=createRevealPortal();root.add(run.revealPortal.group);
   product.rotation.set(0,0,-.15);product.position.set(0,0,0);product.scale.setScalar(0);root.add(product);
-  run.surface.clear();
-  const center=new THREE.Vector3(),rings=[];let burstSound=false,readySound=false;
-  if(!reducedMotion)for(const className of ['reveal-halo','reveal-ring','reveal-ring second']){const node=document.createElement('div');node.className=className;effects.appendChild(node);rings.push(node);}
+  const opacityMaterials=new Map();
+  run.restoreReveal=()=>{for(const [m,base] of opacityMaterials){m.opacity=base.opacity;m.transparent=base.transparent;m.needsUpdate=true;}opacityMaterials.clear();};
+  let burstSound=false,readySound=false,elapsed=0,last=performance.now();
   const finish=()=>{if(ticket!==gameOperation||state!=='reveal')return;cancelAnimationFrame(revealFrame);revealFinish=null;effects.replaceChildren();product.removeFromParent();showProduct();};
   revealFinish=finish;
   const tick=()=>{
     if(ticket!==gameOperation||state!=='reveal')return;
-    const age=performance.now()-began;
-    // SONIDO DE EXPLOSIÓN: sincronizado con la expansión real a los 650 ms.
-    if(!burstSound&&age>=650){burstSound=true;if(age<1450)sound.revealBurst();}
-    if(!readySound&&age>=1600){readySound=true;if(age<3000)sound.revealReady();}
-    const appear=reducedMotion?1:Math.max(0,Math.min(1,(age-700)/900));
-    // El contorno permanece alineado al papel durante toda la revelación.
-    const ease=1-Math.pow(1-appear,3);
-    product.scale.setScalar(.0055*ease*(1+(reducedMotion?0:Math.sin(appear*Math.PI)*.08)));
-    product.rotation.y=reducedMotion?0:(1-ease)*Math.PI*2;
-    product.rotation.z=reducedMotion?0:-.15*(1-ease)+Math.sin(age/700)*.02;
-    activeBurst.update(age/1000,reducedMotion);
-    positionCenteredReveal(root,run.ar.camera);
-    center.setFromMatrixPosition(root.matrixWorld).project(run.ar.camera);
-    const rect=run.ar.renderer.domElement.getBoundingClientRect(),x=rect.left+(center.x+1)*rect.width/2,y=rect.top+(1-center.y)*rect.height/2;
-    const visible=Number.isFinite(x)&&Number.isFinite(y)&&Math.abs(center.z)<1;
-    for(const node of rings){node.style.left=x+'px';node.style.top=y+'px';node.hidden=!visible;}
-    $('reveal-line').textContent=age<700?'Tu recarga toma forma…':'Tu próxima pausa empieza aquí.';
+    const now=performance.now();if(!document.hidden)elapsed+=Math.max(0,now-last);last=now;
+    const age=elapsed-convergeMs;
+    run.energy.setRevealAge(reducedMotion?elapsed/convergeMs*2:elapsed/1000);
+    run.recharge.group.visible=age<0;root.visible=age>=0;
+    $('reveal-line').textContent=age<0?TEXTOS.revelacion.convergencia:age<700?TEXTOS.revelacion.aparicion:TEXTOS.revelacion.producto;
+    if(age>=0){
+      if(!burstSound&&age>=650){burstSound=true;sound.revealBurst();}
+      if(!readySound&&age>=1600){readySound=true;sound.revealReady();}
+      const appear=reducedMotion?1:Math.max(0,Math.min(1,(age-700)/900)),ease=1-Math.pow(1-appear,3);
+      product.scale.setScalar(.0055*ease*(1+(reducedMotion?0:Math.sin(appear*Math.PI)*.08)));
+      product.rotation.y=reducedMotion?0:(1-ease)*Math.PI*2;
+      product.rotation.z=reducedMotion?0:-.15*(1-ease)+Math.sin(age/700)*.02;
+      run.revealPortal.update(age/1000,{duration:duration/1000,reducedMotion});
+      // Salida conjunta: portal, empaque e ingredientes se apagan antes del CTA.
+      const alpha=Math.max(0,Math.min(1,(duration-age)/550));
+      if(alpha<1){
+        if(!opacityMaterials.size)for(const node of [product,activeBurst.group])node.traverse(o=>{for(const m of Array.isArray(o.material)?o.material:[o.material])if(m&&!opacityMaterials.has(m)){opacityMaterials.set(m,{opacity:m.opacity,transparent:m.transparent});m.transparent=true;m.needsUpdate=true;}});
+        for(const [m,base] of opacityMaterials)m.opacity=base.opacity*alpha;
+      }
+      activeBurst.update(age/1000,reducedMotion);positionEnergyReveal(root,run.ar.camera,frozen,age/1000,{reducedMotion});
+      if(burstOrigin===0||!run.burstStarted){burstOrigin=now;run.burstStarted=true;}
+    }
     $('reveal-outcome').hidden=age<outcomeAt;$('reveal-line').hidden=age>=outcomeAt;
     if(age>=duration){finish();return;}revealFrame=requestAnimationFrame(tick);
   };revealFrame=requestAnimationFrame(tick);
@@ -352,7 +368,7 @@ $('scan-again').addEventListener('click',()=>{home();startAR();});
 $('retry').addEventListener('click',()=>{home();startAR();});
 addEventListener('resize',()=>viewer?.resize());
 addEventListener('pagehide',home);
-document.addEventListener('visibilitychange',() => { sound.setPaused(document.hidden||(state==='game'&&!session?.tracked));if (document.hidden && state === 'scan') home();else if(state==='game')syncTrackingPause(); });
+document.addEventListener('visibilitychange',() => { sound.setPaused(document.hidden||(state==='game'&&!session?.tracked));if(state==='game')syncTrackingPause();if(!document.hidden&&session?.video?.paused)session.video.play().catch(()=>{disposeRun(session);failure(Object.assign(new Error('La cámara se interrumpió. Vuelve a activarla.'),{name:'NotReadableError'}));}); });
 $('start').disabled = false; $('start').textContent = 'Activar cámara';
 $('intro-note').textContent = 'Mantén el afiche a la vista durante el juego.';
 
@@ -370,7 +386,7 @@ async function startGame() {
   const ticket=++gameOperation; ++resultVersion;
   closeRanking();stopViewer();game?.cancel();game=null;lastRound=null;
   $('game-ui').classList.remove('final-phase');$('combo-feedback').hidden=true;$('combo-feedback').textContent='';screen('game');$('game-field').replaceChildren();$('game-score').textContent='0';$('game-timer').textContent=String(RULES.durationMs/1000);$('energy-fill').style.width='5%';$('energy-track').setAttribute('aria-valuenow','5');
-  run.recharge.setReveal(false);run.recharge.setCharge(5);syncTrackingPause();
+  run.recharge.setReveal(false);run.recharge.setCharge(5);run.energy.setCharge(5);syncTrackingPause();
   $('countdown').hidden=false;$('countdown-label').textContent='PREPARANDO TU RECARGA';$('countdown-number').textContent='';$('countdown-note').textContent='Toca los ingredientes. Completa combinaciones para ganar bonos.';
   let cloud=null,cloudError='';
   if(ranking.configured) {
@@ -383,13 +399,13 @@ async function startGame() {
   if(cloudError)$('countdown-note').textContent='El ranking no está disponible. Puedes jugar una partida de práctica.';
   $('countdown').hidden=true;sound.start();
   const seed=cloud?.seed||Math.floor(Math.random()*2147483646)+1;
-  game=playRound({surface:run.surface,timer:$('game-timer'),score:$('game-score'),energy:$('energy-fill'),progress:$('energy-track'),seed,paused:!run.tracked||document.hidden,onCharge:percent=>{run.recharge.setCharge(percent);run.portal.setCharge(percent);},onMission:renderMission,onFeedback:showComboFeedback,onEnd:result=>{
+  game=playRound({surface:run.surface,timer:$('game-timer'),score:$('game-score'),energy:$('energy-fill'),progress:$('energy-track'),seed,paused:!run.tracked||document.hidden,onCharge:percent=>{run.energy.setCharge(percent);},onMission:renderMission,onFeedback:showComboFeedback,onEnd:result=>{
     if(ticket!==gameOperation)return;
     game=null;lastRound={...result,runId:cloud?.run_id||null,saved:false,cloudError};++resultVersion;
     // RESULTADO: pide el alias automáticamente; no hace falta pulsar otro botón.
     $('show-score-form').hidden=true;$('show-score-form').disabled=false;
     $('final-score').textContent=String(result.score);$('combo-result').textContent=`${result.completed} recargas completadas · mejor racha: ${result.bestStreak}`;
-    $('result-line').textContent='Tu próxima pausa empieza aquí.';
+    $('result-line').textContent=TEXTOS.cierre.titulo;
     $('save-form').hidden=!lastRound.runId;$('save-score').disabled=!lastRound.runId;$('save-score').textContent='Guardar y competir';
     $('save-status').textContent=lastRound.runId?'':ranking.configured?'Esta partida fue de práctica y no participa en el ranking.':'El ranking no está disponible por ahora. Tu resultado es de práctica.';
     $('save-status').hidden=false;
@@ -557,6 +573,15 @@ $('ranking-panel').addEventListener('keydown',event=>{
   else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
 });
 
+// EDITAR CTA: todos estos valores vienen de textos.js
+$('result-line').textContent=TEXTOS.cierre.titulo;
+$('store-label').textContent=TEXTOS.cierre.botonCompra;
+$('store-link').href=TEXTOS.cierre.enlaceTienda;
+$('nickname-label').textContent=TEXTOS.cierre.tituloFormulario;
+$('nickname').placeholder=TEXTOS.cierre.ejemploNombre;
+$('ranking-preview-title').textContent=TEXTOS.cierre.tituloRanking;
+$('ranking-more-label').textContent=TEXTOS.cierre.verRanking;
+$('play-again').textContent=TEXTOS.cierre.volverJugar;
 renderScanState();
 // Opening the QR URL requests the camera directly; retry remains available.
 startAR();

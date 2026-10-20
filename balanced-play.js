@@ -1,15 +1,15 @@
-import {COMBO_RULES,comboSchedule,createComboState,applyIngredient,comboEnergy,difficultyFor,advanceTravel} from './balanced-rules.js?rank=1';
+import {COMBO_RULES,comboSchedule,createComboState,applyIngredient,comboEnergy,difficultyFor,advanceTimedTravel} from './balanced-rules.js?timing=2';
 export function playRound({surface,timer,score,energy,progress,seed,onCharge=()=>{},onMission=()=>{},onFeedback=()=>{},onEnd,paused=false}){
   const schedule=comboSchedule(seed),active=new Map(),used=new Set(),hits=[],state=createComboState();
   let frame=0,stopped=false,next=0,lastHit=-1000,elapsed=0,lastTime=performance.now(),finalPhase=false,speed=1,travel=0,travelTime=0;
   const segments=[{t:0,travel:0,speed:1,target:1}];
-  function travelAt(t){let segment=segments[0];for(const next of segments){if(next.t>t)break;segment=next;}return segment.travel+advanceTravel(segment.speed,segment.target,t-segment.t).distance;}
+  function travelAt(t){let segment=segments[0];for(const next of segments){if(next.t>t)break;segment=next;}return segment.travel+advanceTimedTravel(segment.speed,segment.target,segment.t,t).distance;}
   const publish=()=>{const percent=comboEnergy(state);score.textContent=String(state.score);energy.style.width=percent+'%';progress.setAttribute('aria-valuenow',String(percent));onCharge(percent);surface.setNeeds?.(state.needed.map((n,i)=>n-state.filled[i]));onMission({...state,needed:[...state.needed],filled:[...state.filled],finalPhase});};
   function advance(){
     const now=performance.now(),delta=Math.max(0,now-lastTime);lastTime=now;
     if(paused)return;
     elapsed+=delta;
-    const time=Math.floor(elapsed),step=advanceTravel(speed,difficultyFor(state.score).speed,time-travelTime);
+    const time=Math.floor(elapsed),step=advanceTimedTravel(speed,difficultyFor(state.score).speed,travelTime,time);
     travel+=step.distance;speed=step.speed;travelTime=time;
     for(const entry of active.values())entry.travelAge=travel-entry.birthTravel;
   }

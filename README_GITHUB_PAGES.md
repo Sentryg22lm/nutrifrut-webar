@@ -1,140 +1,89 @@
-# Nutrifruit · Escanea y recárgate
+# Nutrifruit — Escanea y recárgate
 
-Versión actual: Arma tu recarga, 30 segundos, cámara abierta y ranking conectado al proyecto webAR de Supabase (`uweahpzmydezhqqpnihx`). Anonymous Sign-Ins ya está activado. La configuración y las funciones de esta versión ya están instaladas: no necesitas añadir claves ni ejecutar SQL.
+Entrega integrada: juego de 30 segundos con cámara, rayos vinculados a los aciertos, convergencia, explosión 3D, producto, tienda y ranking. `index.html` y `experiencia-3d.html` abren la misma experiencia. La demostración automática ya no es la entrada principal.
 
 ## Publicar en GitHub Pages
 
-1. Descomprime el ZIP de entrega.
-2. Sube su contenido a la raíz de tu repositorio, conservando las carpetas `assets` y `vendor`. Reemplaza los archivos de la versión anterior. Debe quedar `index.html` en la raíz, no dentro de otra carpeta.
-3. En Settings → Pages selecciona Deploy from a branch → main → /(root), guarda y espera a que termine la publicación.
-4. Abre la URL HTTPS de GitHub Pages en el teléfono. No abras el HTML como archivo local. Si aparece una versión anterior, recarga la página.
-5. Acepta la cámara, enfoca el afiche y pulsa Iniciar juego. No hay selección previa de situaciones. Al terminar, el formulario aparece automáticamente. Escribe tu alias y pulsa Guardar y competir. Se actualizará el ranking resumido de tres puestos. Pulsa Ver más para abrir el top 10. Repite desde otro teléfono para verificar el ranking compartido.
+1. Descomprime el ZIP y sube su contenido a la raíz del repositorio conservando las carpetas `assets` y `vendor`
+2. Reemplaza los archivos de la versión anterior; `index.html` debe quedar en la raíz
+3. En Settings → Pages selecciona Deploy from a branch → main → /(root)
+4. Abre la URL HTTPS publicada en Safari o Chrome del teléfono; no abras el HTML como archivo local
+5. Permite la cámara, enfoca el afiche oficial y pulsa Iniciar juego
 
-El ZIP contiene la versión actual como `index.html`. `experiencia-3d.html` ofrece la misma experiencia. Las rutas son relativas y funcionan dentro de un repositorio de GitHub Pages. `.nojekyll` evita el procesamiento de archivos. No requiere compilar, instalar Node ni alojar un servidor propio. Esta entrega no modifica tu repositorio de GitHub.
+Esta entrega no modifica tu GitHub. No requiere instalar Node ni compilar. La base de datos existente ya está configurada: no ejecutes los SQL incluidos para actualizar esta web. La clave incluida es pública y está preparada para utilizarse desde el navegador.
 
-## Mecánica y cierre
+## Experiencia
 
-La web solicita la cámara al abrirse; si el navegador exige un toque, queda el botón Activar cámara. Reconoce el afiche definitivo, muestra el portal 3D y rayos de energía gruesos alineados con la batería impresa. Durante el juego, el interior se llena de amarillo desde abajo y se va encendiendo el borde según los aciertos. La máscara conserva visibles el CTA y el QR del impreso. Un único botón Iniciar juego permite comenzar directamente. Completa las combinaciones que aparecen durante 30 segundos activos. Los ingredientes caen aleatoriamente por la pantalla; solo suman los que faltan en la combinación. Los errores reinician la racha. Las combinaciones dan un bono y las rachas suben el multiplicador.
+- La cámara solicita permiso al abrirse; queda un botón si el navegador exige tocar para activarla
+- El reconocimiento utiliza un solo stream de cámara y espera a tener dimensiones y un fotograma válidos
+- Aparecen descargas angulares fuera de los bordes del afiche y el contorno de su batería
+- Los 30 segundos avanzan mientras se reconoce el afiche y la pestaña está visible
+- Toca solo los ingredientes pendientes en la combinación; completarla da un bono y mejora el multiplicador
+- Cada acierto transforma el ingrediente tocado en un ingrediente 3D del mismo tipo: entra al rayo más cercano, lo recorre hasta la batería y activa un pulso al llegar
+- El puntaje cuenta al tocar; el relleno y el contorno de la batería se actualizan cuando llega el ingrediente
+- Hay partículas y cereales recorriendo los rayos; los trayectos de aciertos y su carga se pausan si se pierde el afiche o se oculta la pestaña
+- La lluvia acelera con los puntos; hacen falta 48 ingredientes correctos para llenar la batería
+- Al terminar se fija la última pose válida; la cámara permanece abierta durante los 2 segundos de convergencia y los 4,5 segundos de explosión, empaque y mensaje de resultado
+- La explosión nace en el punto donde converge la energía y después el empaque se acomoda al centro de pantalla
+- Con movimiento reducido, el cierre usa una convergencia corta y conserva el tiempo de lectura del resultado
+- El cierre muestra el producto grande en un espacio propio; la tienda y el formulario siguen debajo sin taparlo
+- Adquiere Nutrifruit abre https://boliviasfruit.com/categoria-producto/frutosdeshidratados/
+- Guarda tu alias y tu mejor marca; Ranking muestra hasta tres posiciones reales y Ver más abre el top 10
 
-La lluvia acelera gradualmente según el puntaje, hasta 2,05 veces la velocidad inicial. La batería necesita 48 ingredientes correctos para llegar al 100 %. Perder el afiche o cambiar de pestaña pausa el juego sin consumir tiempo.
+## Ranking existente
 
-Al terminar, el empaque aparece con una explosión de ingredientes 3D que quedan orbitando. La revelación aparece en el centro de la pantalla con la cámara abierta, independientemente de dónde esté la batería del afiche. En el cierre, el producto tiene un visor propio más grande entre el título y los controles. El encuadre prioriza la barra y compacta las órbitas. El empaque oscila suavemente mostrando el frente; el usuario puede girarlo con el dedo. Los botones y el formulario siguen debajo, dentro de una página desplazable; no se superponen al 3D. El botón Adquiere Nutrifruit abre https://boliviasfruit.com/categoria-producto/frutosdeshidratados/ . El formulario de nombre aparece automáticamente. Debajo se muestran hasta tres puestos reales en una sección Ranking con cabecera amarilla. Ver más abre la lista completa de diez. Guardar actualiza el resumen sin abrir una pantalla que tape el empaque. La compra sigue siendo el botón principal. No se utiliza sampling.
+Supabase: `uweahpzmydezhqqpnihx`, campaña `arma-recarga-v1`. Las funciones de inicio, guardado y listado ya están instaladas. Las reglas de puntuación no cambian con las animaciones. El servidor calcula el resultado a partir de las pulsaciones y valida tiempos y repetición de ingredientes. No confía en un total enviado por el navegador.
 
-La paleta es blanco, rojo y amarillo. La tipografía Nunito y su licencia están incluidas. Los logos, las texturas del empaque y los tres íconos de jornada se conservan.
+Alias de 3 a 12 caracteres, con filtro de términos comunes en cliente y servidor. El primer alias queda fijo para la identidad anónima del navegador. Una marca inferior no sustituye la mejor. Borrar datos del navegador o cambiar de dispositivo puede crear otra identidad; no equivale a una cuenta única por persona. No se usa la IP para evitar penalizar estudiantes que compartan la red universitaria.
 
-## Ranking y validación
+Si el ranking no conecta, el juego lo indica como partida de práctica y ese resultado no se guarda. Los resultados existentes no se modificaron en las verificaciones; los guardados de prueba se ejecutaron dentro de una transacción revertida.
 
-El primer alias guardado queda fijo para la identidad anónima de ese navegador. Los alias nuevos tienen de 3 a 12 caracteres y empiezan con una letra; admiten letras, números y guion bajo. Se rechazan términos ofensivos comunes y nombres reservados tanto en la web como en Supabase. El filtro comprueba mayúsculas, tildes, separación con guion bajo, repeticiones y algunas sustituciones por números; no garantiza detectar todo contenido inapropiado. Los nombres ya registrados se conservan. Otro jugador no puede registrar el mismo alias, sin distinguir mayúsculas. Se conserva una sola mejor marca por identidad; una partida inferior no la reemplaza. Los empates mantienen la fecha de la marca anterior.
+## Editar desde Visual Studio Code
 
-Supabase genera la semilla de cada partida y calcula el resultado a partir de las pulsaciones. Comprueba identidad, duración, tipos y tiempos de los eventos, ingredientes repetidos, vencimiento con la aceleración y reglas de puntos. No acepta un total arbitrario enviado por el navegador. Reintentar un guardado no duplica la partida. Las partidas nuevas tienen un intervalo mínimo de 31 segundos y se pueden guardar durante 30 minutos desde su inicio. El tiempo activo del juego se conserva durante las pausas.
+| Elemento | Archivo y comentario |
+| --- | --- |
+| Colores y contraste | `colores.css`, bloques de colores comentados |
+| Posición, grosor y ramificaciones de los rayos | `station-scene.js`, `routes`, `jagged()` y `tube()` |
+| Carga de los rayos según aciertos | `game-energy.js` |
+| Origen compartido y movimiento del empaque | `energy-reveal.js`, `ENERGY_ORIGIN` y `positionEnergyReveal()` |
+| Contorno de la batería | `battery-contour.js`, `haloWidth` y `coreWidth` |
+| Relleno de la batería | `battery-charge.js` y `battery-fill-mask.js` |
+| Franja de combinaciones | `energy-strip.css` |
+| Cámara y espera de imagen | `camera.js` |
+| Flujo del juego y duración del cierre | `burst-app.js`, `startGame()` y `revealProduct()` |
+| Sonidos y volumen | `experience-audio.js`, `masterVolume` |
+| Mensajes por porcentaje | `round-outcome.js` |
+| Tamaño del producto en el CTA | `product-viewer-fit.js` y `experience-clean.css` |
+| Conexión del ranking | `config-current.js` y `ranking-current.js` |
 
-No se usa la IP como identificador: varios estudiantes pueden compartir la red de la universidad. Borrar los datos del navegador o cambiar de dispositivo puede crear otra identidad. La validación reduce resultados imposibles, pero no garantiza una única cuenta por persona ni impide pulsaciones automatizadas.
+El SVG y el `.mind` del afiche se conservan. No cambies las coordenadas de `target-layout.js` sin cambiar y volver a calibrar el target. Los rayos tienen profundidad relativa al afiche; no detectan objetos reales.
 
-Si no se puede iniciar una partida en Supabase, el juego continúa en modo práctica, identificado en pantalla; ese resultado no se guarda. No se muestran jugadores ni puntos ficticios.
+## Verificación
 
-Las tablas están en `nutrifrut_private`, fuera de la Data API. Solo se exponen las funciones `nr_start_run`, `nr_finish_run` y `nr_leaderboard` para sesiones autenticadas. La web incluye únicamente la clave publishable, diseñada para el navegador; nunca secret ni service_role.
+Se comprobaron el arranque con video demorado, un solo stream, pérdida y recuperación del afiche, permisos rechazados, reintento de reconocimiento sin pedir otra cámara, cancelación durante el permiso, limpieza de GPU, partida de 30 segundos activos, sonidos, aceleración, carga real, origen proyectado de la explosión, resultado, CTA, tres posiciones y guardado sin duplicación. Se consultó el ranking real y se verificó el guardado y el alias fijo dentro de una transacción revertida.
 
-El asesor de Supabase muestra dos avisos informativos de [RLS sin políticas](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy). Es intencional: se deniega el acceso directo a las tablas; las operaciones pasan por funciones que verifican al jugador. No hace falta crear políticas que abran esas tablas.
+Estas son verificaciones de código con dispositivos simulados y de las funciones reales de base de datos. La cámara, el seguimiento, el sonido y la composición final requieren validación visual en teléfonos reales; no se garantiza compatibilidad con todos los dispositivos.
 
-## Archivos principales
+## Movimiento de los aciertos
 
-- `index.html`: entrada actual para Pages.
-- `burst-app.js`: cámara, estados de la experiencia, revelación y controles del ranking.
-- `balanced-play.js` y `balanced-rules.js`: juego, combinaciones y velocidad gradual.
-- `ranking-current.js` y `config-current.js`: conexión con Supabase.
-- `supabase/ranking-current.sql`: copia de la migración ya instalada, para referencia técnica. No ejecutarla de nuevo en este proyecto.
-- `assets/target-final.mind`: target definitivo recibido, conservado sin modificaciones.
-- `assets/afiche-final.svg`: SVG oficial con el QR incrustado, conservado sin modificaciones.
-- `assets/afiche-final-guia.png`: miniatura en escala de grises extraída del target compilado; solo guía de escaneo.
-- `target-layout.js`: calibración del afiche y puntos del contorno de la batería.
-- `battery-contour.js`: rayos con núcleo blanco grueso, halo amarillo, ramificaciones, formación progresiva y movimiento reducido.
-- `experience-clean.css`: panel de inicio directo y distribución del cierre; altura del espacio 3D y tamaño de controles.
-- `product-viewer-fit.js`: encuadre grande del empaque según el tamaño real del visor.
-- `centered-reveal.js`: posición central de la revelación con respecto a la cámara.
-- `battery-charge.js` y `battery-fill-mask.js`: relleno amarillo ascendente sobre el afiche y máscara que protege el CTA y QR.
-- `assets/texture_front.png` y `assets/texture_back.png`: empaque original.
-- `assets/jornada`: íconos SVG de clases, entrega y estudio.
-- `vendor`: dependencias incluidas, MindAR, Three.js y Supabase JS.
+`combo-surface.js` captura la posición del toque y el tipo correcto. `game-energy.js` lo proyecta al espacio del afiche. `station-scene.js`, en `collect()` y `cargoPoint()`, selecciona el rayo cercano y anima el recorrido: entrada de 180 ms, viaje por el rayo de 1000 ms y entrada a la batería de 220 ms. Al llegar hay una onda y sube la carga visual. Los puntos y los eventos del ranking siguen contando al tocar, sin modificar las reglas del servidor. Los ingredientes incorrectos conservan su respuesta de error y no generan transporte.
 
-La versión actual usa el `.mind` definitivo y ya no depende del target provisional. Los recursos anteriores se conservan para las pruebas históricas. Si cambia el diseño impreso o su encuadre de compilación, recompila el target y ajusta `target-layout.js`; no basta con reemplazar el SVG.
+El pool reutiliza 21 mallas; no crea modelos nuevos por cada toque. Se comprobaron el punto de nacimiento, las etapas del recorrido, el mismo tipo de ingrediente, la carga al llegar, las pausas, las pulsaciones rápidas y el cierre. El tamaño y los recorridos deben revisarse visualmente en teléfono.
 
-## Verificación realizada
+## Rayos flexibles y portal del cierre
 
-Paridad JavaScript/PostgreSQL de puntajes y aceleración con cinco semillas y tres velocidades de fotogramas, incluyendo errores; reloj y pausas; permisos, alias fijo y único, mejor marca, top 10 y posición fuera de los primeros diez. Flujo automatizado de cámara, revelación, fallo y reintento de guardado, apertura del top y prevención de doble envío.
+Los rayos ahora se ondulan en el espacio sin mover la pose del afiche. Al tocar un ingrediente correcto, el rayo cercano se estira brevemente hacia él y lo transporta. `ray-motion.js` comparte el cálculo de deformación entre las mallas y el recorrido de los ingredientes. La amplitud y las velocidades están comentadas; `station-scene.js` limita el alcance al atrapar a 0,16 unidades del target.
 
-Prueba real por la API de Supabase: acceso anónimo, inicio, resultado de 1350 puntos, guardado, reintento idempotente y consulta del top. Los datos de esa prueba fueron retirados. El ranking muestra únicamente las marcas reales existentes. La versión AR anterior fue validada por el usuario desde su teléfono. Esta entrega requiere comprobar en teléfono el nuevo guardado y la interfaz final; no se afirma una prueba visual nueva de cámara en este entorno.
+`reveal-portal.js` recupera el portal circular detrás del empaque durante la explosión. Aparece desde los 0,4 segundos de la revelación, permanece visible y se desvanece durante los últimos 0,55 segundos. El empaque y los ingredientes se desvanecen junto a él; al pasar al CTA se restaura la opacidad del visor del producto. El portal se elimina al salir o terminar.
 
-## Editar colores y textos en Visual Studio Code
+Se verificaron deformación visible, extremos fijos, captura, coincidencia del recorrido con la geometría, movimiento reducido, aparición del portal, giro, desvanecimiento y restauración del producto en el CTA. Falta revisión visual en teléfono.
 
-Abre `colores.css` y busca «BLOQUE» con Ctrl+F. El bloque 1 contiene la paleta general; el 2, el botón top 10; el 3, el formulario y el podio; el 4, el interior de la batería 3D. Los bloques siguientes describen el tamaño, borde y brillo de cada elemento. Para cambiar un color sustituye su código, por ejemplo `#d71920`, guarda y vuelve a publicar los archivos.
+## Ritmo competitivo y edición de textos
 
-`index.html` contiene comentarios PANTALLA 1 a 5, NOMBRE AUTOMÁTICO y BOTÓN TOP 10 para ubicar los textos y controles. `experience-clean.css` controla la distribución final y se carga después de los estilos anteriores. `balanced-ui.css` organiza la tipografía; `brand-white.css`, los elementos del tema. `scene-stable.js` y `portal-stable.js` leen la paleta de `colores.css`; `product-burst.js` indica dónde cambiar los tonos naturales de los ingredientes 3D. Las imágenes del envase, los logos y los íconos se editan en sus archivos originales, no mediante CSS.
+La partida sigue durando 30 segundos y mantiene sus 77 ingredientes, recetas y puntos. La velocidad existente por puntaje recibe un factor por tiempo activo: 0–8 s ×1; 8–14 s ×1,025; 14–20 s ×1,05; 20–25 s ×1,08; 25–27 s ×1,12; 27–30 s ×1,15. Cada cambio se suaviza durante aproximadamente 650 ms. No se redujo la zona de toque ni se añadieron ingredientes fáciles para inflar los puntos.
 
-`nickname-policy.js` contiene las reglas y términos del filtro. Si se cambia esa política, hay que sincronizar la función privada `nr_alias_error` de Supabase. Los colores y los textos visuales no requieren cambios en Supabase. `supabase/alias-policy.sql` conserva la actualización ya instalada.
+El cliente y Supabase usan `balanced-v2`. La actualización `supabase/balanced-timing.sql` ya fue aplicada en el proyecto actual; no tienes que ejecutarla para publicar en GitHub Pages. Las partidas anteriores se validan con sus reglas originales y se conservan las mejores marcas. Para una instalación nueva en otro proyecto, instala `ranking-current.sql`, `alias-policy.sql` y después `balanced-timing.sql`.
 
-El asesor también señala que la [protección frente a contraseñas filtradas](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection) está desactivada. Este juego utiliza acceso anónimo y no recoge contraseñas; ese aviso corresponde a métodos de acceso con contraseña.
+Los textos actuales se conservan. Para cambiar CTA, botón, tienda, mensajes del cierre o del resultado, abre **textos.js** y busca **EDITAR TEXTOS Y CTA**. La guía **EDITAR_TEXTOS.md** incluye ejemplos y una tabla de cada propiedad. La bienvenida se encuentra en `index.html` bajo **EDITAR INICIO**.
 
-## Integración del afiche definitivo · 19 de octubre de 2026
-
-El QR del nuevo SVG está incrustado y el archivo `.mind` contiene un único target de 4500 × 4500. Los originales recibidos se conservan byte por byte. La transformación del SVG se alineó con la miniatura de seguimiento del `.mind`, incluyendo el margen de su exportación cuadrada.
-
-La batería flotante de prueba se sustituyó por rayos de geometría irregular sobre el borde real de la batería impresa, incluido su terminal. El núcleo blanco mide 0,0055 del ancho del afiche y su halo amarillo 0,018. Se forman durante 1,1 segundos y tienen ramificaciones cortas; las partículas recorren el borde. La guía permanece tenue y fija. El borde se enciende de abajo hacia arriba según la carga ganada, acompañado por el relleno del interior. La carga se interpola suavemente y se ajusta al valor exacto para iluminar también el terminal al llegar al 100 %, sin cambiar escala, posición ni rotación del soporte. El efecto se interrumpe donde el CTA y el QR impresos pasan por delante. Con movimiento reducido los rayos aparecen completos y se ocultan las partículas móviles.
-
-Las estelas de ingredientes terminan en el centro de la batería impresa. La revelación del producto se sitúa en el centro de la cámara; las estelas siguen terminando en la batería. Se mantienen el portal, los 30 segundos activos, la pausa al perder el afiche, los nombres, el top 10 y el botón de la tienda. La base de datos y sus reglas no se modificaron en esta actualización.
-
-Pruebas nuevas: integridad de SVG/MIND, coordenadas finitas y huecos de oclusión, aumento de energía sin deformar el contorno, movimiento reducido, liberación de geometrías y materiales. Flujo simulado completo de cámara, pausa de seguimiento, juego, revelación, guardado de alias y apertura del ranking sin doble envío. Aún debe verificarse en un teléfono real la detección del afiche impreso y la precisión del borde durante el movimiento.
-
-El SVG oficial conserva textos editables que dependen de Inter y Gotham. Esto no altera el reconocimiento, que usa el `.mind` ya compilado. Para volver a imprimir o recompilar desde el SVG, usa las fuentes originales en Illustrator o una copia con textos convertidos a contornos, para evitar sustituciones.
-
-QR verificado mediante lectura del PNG incrustado: https://sentryg22lm.github.io/nutrifrut-webar/ . Para que ese QR abra esta actualización, publica el contenido del nuevo ZIP en la raíz de ese repositorio. No hace falta cambiar el QR ni ejecutar SQL.
-
-
-## Inicio directo y cierre sin superposición
-
-Se eliminó la elección de clases, entrega y estudio. Tras reconocer el target, Iniciar juego queda habilitado. Si el afiche se pierde antes de comenzar, el botón se desactiva hasta recuperarlo. La mecánica de combinaciones y sus reglas siguen siendo las mismas.
-
-El visor 3D está dentro del flujo del resultado, antes de la tienda y del ranking. ResizeObserver ajusta su cámara y lienzo al espacio real cuando cambia el tamaño; en teléfonos pequeños se puede desplazar la página para completar el nombre. Al volver a jugar se desconecta el observador y se libera el visor anterior.
-
-Pruebas de esta actualización: inicio sin selección previa y bloqueo sin target; 30 segundos activos con pausa; revelación con cámara abierta, alias, top 10 y prevención de doble envío; formación y grosor de rayos; proyección de los ingredientes en cinco tamaños de visor; integridad del afiche y target. El ajuste visual de los rayos y del cierre debe confirmarse en teléfono real.
-
-
-## Carga visible, empaque grande y ranking resumido
-
-La carga se obtiene de la misma regla del juego: 48 ingredientes correctos para llegar al 100 %. Los aciertos alimentan tanto el indicador superior como el relleno y los rayos del afiche. Los errores no suman carga. La forma interior y el borde están alineados con el target y se mantienen inmóviles; solo cambian la altura de la carga y los tramos encendidos.
-
-El visor final aumenta a 43svh, con límites de 300–430 px en orientación vertical. El nuevo encuadre muestra el empaque al 73–75 % del ancho del visor en las comprobaciones geométricas con teléfonos verticales, frente al encuadre anterior que reservaba espacio para una esfera completa. Los ingredientes siguen orbitando, más cerca del producto. El movimiento automático conserva visible su frente; no da vueltas completas por sí solo. Los controles siguen debajo del visor, sin superposición.
-
-La sección Ranking consulta la función existente de Supabase, ordena los resultados y muestra hasta tres. Si solo existe uno, aparece uno. Si no hay marcas, invita a guardar la primera. Si falla la conexión, muestra el error y Ver más permite reintentar. Al guardar se actualiza el resumen sin abrir automáticamente el ranking completo. El enlace Ver más conserva la tabla de diez puestos. Esta entrega no modifica la base de datos ni requiere ejecutar SQL.
-
-Pruebas: relleno y tramos del borde al 5/25/50/75/100 %; alineación del interior; revelación centrada tras girar y desplazar la cámara; empaque real y órbitas dentro del visor en tamaños verticales y horizontales; acierto conectado al relleno durante una partida; pausa por pérdida del afiche; guardado, resumen, estados vacío/error, Ver más y prevención de doble envío. Consulta de lectura de la función real de ranking confirmada, sin crear marcas de prueba. La revisión visual en teléfono sigue siendo necesaria.
-
-
-## Corrección de visibilidad de la explosión
-
-El motor MindAR configura una cámara con plano cercano de 10 unidades. La revelación centrada se estaba colocando a una distancia menor y quedaba recortada, aunque su tiempo de animación sí se ejecutaba. `centered-reveal.js` ahora aumenta la distancia y la escala del conjunto en la misma proporción, según el plano cercano real. La explosión se conserva centrada, con el mismo tamaño aparente, antes de pasar al producto grande y al ranking.
-
-Se comprobó la proyección de las mallas de ingredientes durante agrupación, explosión y órbita con planos cercanos de 0,01, 10 y 100, cámaras giradas y tamaños verticales/horizontales. También se verificó el flujo de 30 segundos → revelación visible → cierre con la configuración de cámara de MindAR. La comprobación visual final debe realizarse en teléfono.
-
-
-## Franja de energía y sonidos
-
-El panel blanco de combinaciones se reemplazó por una franja roja con extremos diagonales. Se mantienen el logo, puntaje, reloj y carga superior. Las cantidades indican lo pendiente con ×1, ×2, etc.; un ingrediente completo se atenúa y dice Listo. Las confirmaciones y errores se muestran durante aproximadamente un segundo, fuera de la franja. Se retiraron los mensajes permanentes y la barra inferior de la partida. En modo práctica se mantiene una etiqueta pequeña para aclarar que el resultado no participa en el ranking.
-
-`energy-strip.css` contiene los tamaños, cortes diagonales y distribución de los combos. Los colores se editan en el BLOQUE 11 de `colores.css`. `burst-app.js` contiene comentarios COMBOS y AVISO SONORO para ubicar los contadores, avisos y sonidos.
-
-`experience-audio.js` genera sonidos originales mediante Web Audio, sin descargar archivos, solicitar micrófono ni añadir música en bucle. Hay señales distintas para inicio, acierto, error, combinación completa, últimos cinco segundos y la revelación: carga inicial, explosión a los 650 ms y acorde al aparecer el empaque. El sonido se habilita desde el toque en Iniciar juego. El control de altavoz, visible durante juego y revelación, permite silenciar; se conserva la preferencia en ese navegador. Perder el target, salir o esconder la pestaña cancela los sonidos pendientes. Si Web Audio no está disponible, el juego sigue funcionando.
-
-VOLUMEN GENERAL: `masterVolume=.22` en `experience-audio.js`. Las duraciones, notas y niveles de cada efecto están comentados en ese módulo. Se limitan las voces simultáneas y se usa un compresor para evitar acumulaciones fuertes. El volumen percibido depende también del teléfono.
-
-Verificación de esta actualización: desbloqueo por interacción, secuencia válida de nodos, envolventes y duración de efectos, silencio inmediato y persistente, pausas y fallo o ausencia de audio. Flujo simulado completo con contadores compactos, avisos temporales, combinaciones, 30 segundos activos, cinco señales finales, explosión centrada visible con near=10, resultado, ranking resumido y guardado sin duplicación. No se modificaron reglas de puntaje, base de datos ni autenticación. La composición visual y el volumen final deben verificarse en teléfono real.
-
-
-## Resultado de carga antes de la tienda
-
-Se eliminaron el aviso de error del combo y el texto flotante Sin racha. Un toque en un ingrediente que ya no hace falta conserva el sonido de error y deja un pequeño destello de 240 ms en ese ingrediente. Los aciertos y sus puntos siguen funcionando igual.
-
-Durante los últimos dos segundos de la revelación aparece el porcentaje final de la batería. Al llegar al 100 %: «¡Batería al 100 %!» y «Completaste tu recarga». Por debajo: «Tu recarga llegó al XX %» y «Supera tu marca en la próxima partida». Se usa la energía final calculada por el juego, no el puntaje. `round-outcome.js` contiene los dos mensajes y la condición.
-
-El resultado sustituye el texto de la misma leyenda de revelación, sin añadir otra pantalla ni un botón para continuar. El cierre pasa automáticamente a la tienda y al ranking. La revelación normal dura 4,5 segundos; con movimiento reducido dura 2,2 segundos para mantener los dos segundos de lectura sin animación intensa.
-
-Pruebas de esta actualización: casos de carga 5/30/65/99/100 %, sin considerar completo un 99,9 %; error sin texto y acierto con puntos; resultado visible de 2,5 a 4,5 segundos antes de la transición; flujo con 30 segundos activos, pausa, explosión central, audio y guardado. Queda la comprobación visual en teléfono.
+Verificación: recorrido independiente de la tasa de cuadros y límites de cada fase; 300 simulaciones por versión con reacciones de 350/650/900 ms; diez casos de guardado real y rechazo de ingredientes vencidos en una transacción revertida; cámara, partida, sonidos, revelación y CTA/ranking. En esas simulaciones, la diferencia media fue menor de un acierto; no sustituye pruebas con estudiantes reales.

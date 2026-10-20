@@ -2,7 +2,7 @@ import * as THREE from './vendor/three.module.js';
 
 // Game sprites fall in screen coordinates. The reveal stays attached to the poster.
 // This avoids mobile SVG texture rendering while keeping the camera and 3D scene.
-export async function createIngredientSurface({anchor,camera,renderer,field,images,reducedMotion=false,rechargePoint=[0,-.43,.15]}) {
+export async function createIngredientSurface({anchor,camera,renderer,field,images,reducedMotion=false,rechargePoint=[0,-.43,.15],onCollect=null}) {
   const group=new THREE.Group();anchor.add(group);
   const nodes=new Map(),center=new THREE.Vector3(),corner=new THREE.Vector3();
   const names=['Avena','Frutos rojos','Cereal'];
@@ -51,7 +51,8 @@ export async function createIngredientSurface({anchor,camera,renderer,field,imag
     setNeeds(value){needs=[...value];for(const entry of nodes.values())entry.button.dataset.needed=String(needs[entry.item.type]>0);},
     collect(id,feedback={correct:true,points:10}){
       const entry=nodes.get(id);if(!entry)return;
-      if(!reducedMotion&&feedback.correct){
+      const routed=feedback.correct&&onCollect?.({type:entry.item.type,x:parseFloat(entry.button.style.left),y:parseFloat(entry.button.style.top),camera,renderer,anchor});
+      if(!routed&&!reducedMotion&&feedback.correct){
         const trail=document.createElement('img');trail.src=images[entry.item.type];trail.alt='';trail.className='ingredient-trail';trail.style.left=entry.button.style.left;trail.style.top=entry.button.style.top;field.appendChild(trail);
         // AFICHE FINAL: la estela llega a la batería impresa, no al centro de pantalla.
         anchor.updateWorldMatrix(true,true);camera.updateMatrixWorld();
