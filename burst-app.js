@@ -11,6 +11,7 @@ import { TARGET } from './target-layout.js?v=1';
 import { fitProductCamera } from './product-viewer-fit.js?v=2';
 import {positionCenteredReveal} from './centered-reveal.js?v=2';
 import {createExperienceAudio} from './experience-audio.js?v=1';
+import {roundOutcome} from './round-outcome.js?v=1';
 
 const $ = id => document.getElementById(id);
 let state = 'intro', operation = 0, session = null, viewer = null;
@@ -78,7 +79,7 @@ async function loadEngine() {
         import('./vendor/OrbitControls.js'),
         import('./model.js'),
         import('./battery-contour.js?v=3'),
-        import('./combo-surface.js?target=final-1'),
+        import('./combo-surface.js?outcome=2'),
       ]);
       THREE = three; MindARThree = ar.MindARThree; OrbitControls = controls.OrbitControls; makeRecharge=scene.createBatteryContour;makeARGame=arGame.createIngredientSurface;
       product = product || await model.createPackaging();
@@ -301,6 +302,11 @@ function showProduct() {
 // REVELACIÓN: explosión de ingredientes y transición al producto final.
 function revealProduct(run,ticket) {
   screen('reveal');sound.setPaused(document.hidden);sound.revealCharge();
+  // CIERRE: el resultado ocupa los últimos dos segundos de la revelación.
+  const duration=reducedMotion?2200:4500,outcomeAt=duration-2000;
+  const outcome=roundOutcome(lastRound?.energy??5);
+  $('outcome-title').textContent=outcome.title;$('outcome-subtitle').textContent=outcome.subtitle;
+  $('reveal-outcome').hidden=true;$('reveal-line').hidden=false;
   const began=performance.now(),effects=$('reveal-effects');effects.replaceChildren();
   activeBurst?.dispose();activeBurst=createProductBurst();burstOrigin=began;
   run.recharge.setReveal(true);
@@ -333,7 +339,8 @@ function revealProduct(run,ticket) {
     const visible=Number.isFinite(x)&&Number.isFinite(y)&&Math.abs(center.z)<1;
     for(const node of rings){node.style.left=x+'px';node.style.top=y+'px';node.hidden=!visible;}
     $('reveal-line').textContent=age<700?'Tu recarga toma forma…':'Tu próxima pausa empieza aquí.';
-    if(age>=(reducedMotion?1800:4500)){finish();return;}revealFrame=requestAnimationFrame(tick);
+    $('reveal-outcome').hidden=age<outcomeAt;$('reveal-line').hidden=age>=outcomeAt;
+    if(age>=duration){finish();return;}revealFrame=requestAnimationFrame(tick);
   };revealFrame=requestAnimationFrame(tick);
 }
 
@@ -419,7 +426,7 @@ function renderMission(mission){
 // COMBOS: confirmaciones breves, sin mensajes permanentes sobre la cámara.
 function showComboFeedback(result){
   if(result.phaseStarted){showFeedback('Últimos 5 s','time',1000);return;}
-  if(!result.correct){sound.miss();showFeedback('Ese ya está listo · racha reiniciada','wrong',950);return;}
+  if(!result.correct){sound.miss();clearTimeout(feedbackTimer);$('combo-feedback').hidden=true;return;}
   if(result.completed){
     sound.combo();showFeedback(`Recarga completa · +${result.bonus}`,'complete',1050);
     const strip=$('mission-card');

@@ -127,3 +127,14 @@ El panel blanco de combinaciones se reemplazó por una franja roja con extremos 
 VOLUMEN GENERAL: `masterVolume=.22` en `experience-audio.js`. Las duraciones, notas y niveles de cada efecto están comentados en ese módulo. Se limitan las voces simultáneas y se usa un compresor para evitar acumulaciones fuertes. El volumen percibido depende también del teléfono.
 
 Verificación de esta actualización: desbloqueo por interacción, secuencia válida de nodos, envolventes y duración de efectos, silencio inmediato y persistente, pausas y fallo o ausencia de audio. Flujo simulado completo con contadores compactos, avisos temporales, combinaciones, 30 segundos activos, cinco señales finales, explosión centrada visible con near=10, resultado, ranking resumido y guardado sin duplicación. No se modificaron reglas de puntaje, base de datos ni autenticación. La composición visual y el volumen final deben verificarse en teléfono real.
+
+
+## Resultado de carga antes de la tienda
+
+Se eliminaron el aviso de error del combo y el texto flotante Sin racha. Un toque en un ingrediente que ya no hace falta conserva el sonido de error y deja un pequeño destello de 240 ms en ese ingrediente. Los aciertos y sus puntos siguen funcionando igual.
+
+Durante los últimos dos segundos de la revelación aparece el porcentaje final de la batería. Al llegar al 100 %: «¡Batería al 100 %!» y «Completaste tu recarga». Por debajo: «Tu recarga llegó al XX %» y «Supera tu marca en la próxima partida». Se usa la energía final calculada por el juego, no el puntaje. `round-outcome.js` contiene los dos mensajes y la condición.
+
+El resultado sustituye el texto de la misma leyenda de revelación, sin añadir otra pantalla ni un botón para continuar. El cierre pasa automáticamente a la tienda y al ranking. La revelación normal dura 4,5 segundos; con movimiento reducido dura 2,2 segundos para mantener los dos segundos de lectura sin animación intensa.
+
+Pruebas de esta actualización: casos de carga 5/30/65/99/100 %, sin considerar completo un 99,9 %; error sin texto y acierto con puntos; resultado visible de 2,5 a 4,5 segundos antes de la transición; flujo con 30 segundos activos, pausa, explosión central, audio y guardado. Queda la comprobación visual en teléfono.

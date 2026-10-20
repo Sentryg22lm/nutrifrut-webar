@@ -59,7 +59,13 @@ export async function createIngredientSurface({anchor,camera,renderer,field,imag
         const dx=rect.left+(corner.x+1)*rect.width/2-parseFloat(trail.style.left),dy=rect.top+(1-corner.y)*rect.height/2-parseFloat(trail.style.top);
         if(trail.animate){const animation=trail.animate([{transform:'translate(-50%,-50%) scale(1)',opacity:1},{transform:`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px)) scale(.15)`,opacity:0}],{duration:430,easing:'ease-in',fill:'forwards'});animation.finished.catch(()=>{}).then(()=>trail.remove());}else trail.remove();
       }
-      const popup=document.createElement('span');popup.className='point-popup';popup.textContent=feedback.correct?'+'+feedback.points:'Sin racha';if(!feedback.correct)popup.className+=' wrong-popup';popup.style.left=entry.button.style.left;popup.style.top=entry.button.style.top;field.appendChild(popup);setTimeout(()=>popup.remove(),550);remove(id);
+      // ERROR SIN TEXTO: solo un destello breve en el ingrediente pulsado.
+      const popup=document.createElement('span');
+      popup.className=feedback.correct?'point-popup':'ingredient-miss';
+      if(feedback.correct)popup.textContent='+'+feedback.points;
+      else {popup.setAttribute('aria-hidden','true');popup.style.width=entry.button.style.width;popup.style.height=entry.button.style.height;}
+      popup.style.left=entry.button.style.left;popup.style.top=entry.button.style.top;
+      field.appendChild(popup);setTimeout(()=>popup.remove(),feedback.correct?550:240);remove(id);
     },
     setCollect(callback){collect=callback;},
     reveal(nextField){

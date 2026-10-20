@@ -70,3 +70,14 @@
   .balanced-experience #mission-card { width:100%; max-width:600px; align-self:center; }
 }
 @media(prefers-reduced-motion:reduce) { .balanced-experience #combo-multiplier { transform:none; } }
+
+/* ERROR: destello pequeño sobre el ingrediente, sin texto flotante. */
+.ingredient-miss { position:fixed; z-index:6; pointer-events:none; border:3px solid var(--nf-rojo-oscuro); border-radius:50%; transform:translate(-50%,-50%); box-shadow:0 0 0 3px var(--nf-blanco); animation:ingredient-miss .24s ease-out both; }
+@keyframes ingredient-miss { from { opacity:.95; transform:translate(-50%,-50%) scale(.9); } to { opacity:0; transform:translate(-50%,-50%) scale(1.13); } }
+/* RESULTADO: dos líneas dentro del cierre existente, sin otra tarjeta. */
+#reveal-outcome { margin:0 auto; display:flex; flex-direction:column; gap:4px; max-width:330px; }
+#outcome-title { font-size:clamp(19px,5.3vw,24px); line-height:1.12; font-weight:900; color:var(--nf-rojo); }
+#outcome-subtitle { font-size:12px; line-height:1.3; color:var(--nf-texto); }
+@media(prefers-reduced-motion:reduce) { .ingredient-miss { animation:none; } }
+
+.balanced-experience .reveal-caption { padding:14px 16px; }
