@@ -10,16 +10,22 @@ import {createProductBurst} from './product-burst.js?burst=1';
 import { TARGET } from './target-layout.js?v=1';
 import { fitProductCamera } from './product-viewer-fit.js?v=2';
 import {positionCenteredReveal} from './centered-reveal.js?v=2';
+import {createExperienceAudio} from './experience-audio.js?v=1';
 
 const $ = id => document.getElementById(id);
 let state = 'intro', operation = 0, session = null, viewer = null;
 let enginePromise = null, product = null, THREE = null, MindARThree = null, OrbitControls = null, makeRecharge = null, makeARGame = null;
 let targetVerified=false, game=null, gameOperation=0, lastRound=null, resultVersion=0, rankingOperation=0, rankFocus=null,previewOperation=0;
 let revealFrame=0,revealFinish=null,activeBurst=null,burstOrigin=0;
+const sound=createExperienceAudio();
+let feedbackTimer=0,lastSoundSecond=30;
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function screen(next) {
   state = next;
+  $('sound-toggle').hidden=!sound.supported||!['game','reveal'].includes(next);
+  $('sound-toggle').dataset.phase=next;
+  if(next!=='game'&&next!=='reveal')sound.stop();
   $('intro').hidden = next !== 'intro';
   $('scan-ui').hidden = next !== 'scan';
   $('result-ui').hidden = next !== 'product';
@@ -124,6 +130,7 @@ function stopViewer() {
   $('product-stage').replaceChildren(); viewer = null;
 }
 function home() {
+  clearTimeout(feedbackTimer);sound.stop();sound.setPaused(false);
   cancelAnimationFrame(revealFrame);revealFinish=null;
   activeBurst?.dispose();activeBurst=null;
   $('reveal-effects').replaceChildren();
@@ -236,6 +243,7 @@ async function attachTracking(run) {
       const t = (performance.now() - began) / 1000;
       pose.update(performance.now());
       recharge.update(t,reducedMotion,state==='game');run.portal.update(t,reducedMotion,state==='game');
+      updateGameSound();
       ar.renderer.render(ar.scene, ar.camera);
     });
     run.hintTimer = setTimeout(() => {
@@ -292,7 +300,7 @@ function showProduct() {
 
 // REVELACIÓN: explosión de ingredientes y transición al producto final.
 function revealProduct(run,ticket) {
-  screen('reveal');
+  screen('reveal');sound.setPaused(document.hidden);sound.revealCharge();
   const began=performance.now(),effects=$('reveal-effects');effects.replaceChildren();
   activeBurst?.dispose();activeBurst=createProductBurst();burstOrigin=began;
   run.recharge.setReveal(true);
@@ -302,13 +310,16 @@ function revealProduct(run,ticket) {
   activeBurst.group.position.set(0,0,0);root.add(activeBurst.group);
   product.rotation.set(0,0,-.15);product.position.set(0,0,0);product.scale.setScalar(0);root.add(product);
   run.surface.clear();
-  const center=new THREE.Vector3(),rings=[];
+  const center=new THREE.Vector3(),rings=[];let burstSound=false,readySound=false;
   if(!reducedMotion)for(const className of ['reveal-halo','reveal-ring','reveal-ring second']){const node=document.createElement('div');node.className=className;effects.appendChild(node);rings.push(node);}
   const finish=()=>{if(ticket!==gameOperation||state!=='reveal')return;cancelAnimationFrame(revealFrame);revealFinish=null;effects.replaceChildren();product.removeFromParent();showProduct();};
   revealFinish=finish;
   const tick=()=>{
     if(ticket!==gameOperation||state!=='reveal')return;
     const age=performance.now()-began;
+    // SONIDO DE EXPLOSIÓN: sincronizado con la expansión real a los 650 ms.
+    if(!burstSound&&age>=650){burstSound=true;if(age<1450)sound.revealBurst();}
+    if(!readySound&&age>=1600){readySound=true;if(age<3000)sound.revealReady();}
     const appear=reducedMotion?1:Math.max(0,Math.min(1,(age-700)/900));
     // El contorno permanece alineado al papel durante toda la revelación.
     const ease=1-Math.pow(1-appear,3);
@@ -334,7 +345,7 @@ $('scan-again').addEventListener('click',()=>{home();startAR();});
 $('retry').addEventListener('click',()=>{home();startAR();});
 addEventListener('resize',()=>viewer?.resize());
 addEventListener('pagehide',home);
-document.addEventListener('visibilitychange',() => { if (document.hidden && state === 'scan') home();else if(state==='game')syncTrackingPause(); });
+document.addEventListener('visibilitychange',() => { sound.setPaused(document.hidden||(state==='game'&&!session?.tracked));if (document.hidden && state === 'scan') home();else if(state==='game')syncTrackingPause(); });
 $('start').disabled = false; $('start').textContent = 'Activar cámara';
 $('intro-note').textContent = 'Mantén el afiche a la vista durante el juego.';
 
@@ -342,15 +353,16 @@ async function withTimeout(promise,ms) {let id;try{return await Promise.race([pr
 function syncTrackingPause() {
   if(state!=='game')return;
   const paused=!session?.tracked||document.hidden;
-  $('tracking-pause').hidden=!paused;game?.setPaused(paused);
+  $('tracking-pause').hidden=!paused;game?.setPaused(paused);sound.setPaused(paused);
 }
 // JUEGO: conecta la partida al ranking antes de iniciar los 30 segundos.
 async function startGame() {
   const run=session;
   if(!targetVerified||state!=='scan'||!run?.tracked||!run.surface||document.hidden)return;
+  void sound.unlock();sound.setPaused(false);lastSoundSecond=30;clearTimeout(feedbackTimer);
   const ticket=++gameOperation; ++resultVersion;
   closeRanking();stopViewer();game?.cancel();game=null;lastRound=null;
-  $('game-ui').classList.remove('final-phase');$('combo-feedback').textContent='Toca solo los ingredientes que faltan.';screen('game');$('game-field').replaceChildren();$('game-score').textContent='0';$('game-timer').textContent=String(RULES.durationMs/1000);$('energy-fill').style.width='5%';$('energy-track').setAttribute('aria-valuenow','5');
+  $('game-ui').classList.remove('final-phase');$('combo-feedback').hidden=true;$('combo-feedback').textContent='';screen('game');$('game-field').replaceChildren();$('game-score').textContent='0';$('game-timer').textContent=String(RULES.durationMs/1000);$('energy-fill').style.width='5%';$('energy-track').setAttribute('aria-valuenow','5');
   run.recharge.setReveal(false);run.recharge.setCharge(5);syncTrackingPause();
   $('countdown').hidden=false;$('countdown-label').textContent='PREPARANDO TU RECARGA';$('countdown-number').textContent='';$('countdown-note').textContent='Toca los ingredientes. Completa combinaciones para ganar bonos.';
   let cloud=null,cloudError='';
@@ -359,10 +371,10 @@ async function startGame() {
     catch(error){cloud=null;cloudError=error?.message||'No se pudo conectar el ranking.';}
   }
   if(ticket!==gameOperation||state!=='game')return;
-  $('game-mode').textContent=cloud?'Partida para el ranking':'Partida de práctica';
+  $('game-mode').textContent=cloud?'':'Partida de práctica';$('game-mode').hidden=Boolean(cloud);
   $('countdown-label').textContent='TOCA LOS INGREDIENTES';
   if(cloudError)$('countdown-note').textContent='El ranking no está disponible. Puedes jugar una partida de práctica.';
-  $('countdown').hidden=true;
+  $('countdown').hidden=true;sound.start();
   const seed=cloud?.seed||Math.floor(Math.random()*2147483646)+1;
   game=playRound({surface:run.surface,timer:$('game-timer'),score:$('game-score'),energy:$('energy-fill'),progress:$('energy-track'),seed,paused:!run.tracked||document.hidden,onCharge:percent=>{run.recharge.setCharge(percent);run.portal.setCharge(percent);},onMission:renderMission,onFeedback:showComboFeedback,onEnd:result=>{
     if(ticket!==gameOperation)return;
@@ -400,15 +412,38 @@ function renderMission(mission){
   mission.needed.forEach((needed,i)=>{
     const card=$('need-'+i),remaining=Math.max(0,needed-mission.filled[i]);
     card.classList.toggle('need-done',remaining===0);card.hidden=needed===0;
-    $('need-count-'+i).textContent=remaining===0?'Listo':remaining+' por recoger';
+    $('need-count-'+i).textContent=remaining===0?'Listo':'×'+remaining;
+    card.setAttribute('aria-label',(['Avena','Frutos rojos','Cereal'][i])+': '+(remaining===0?'completo':remaining+' por recoger'));
   });
 }
-// FEEDBACK DE COMBINACIÓN: texto y destello breve del panel de ingredientes.
+// COMBOS: confirmaciones breves, sin mensajes permanentes sobre la cámara.
 function showComboFeedback(result){
-  $('combo-feedback').textContent=result.phaseStarted?'ÚLTIMOS 5 SEGUNDOS · COMPLETA TU RECARGA':!result.correct?'Ese ingrediente ya no hace falta. Racha reiniciada.':result.completed?`Recarga completada · +${result.bonus} de bono`:'Bien. Sigue con lo que falta.';
-  const box=$('mission-card');
-  if(box.animate&&!reducedMotion&&result.completed)box.animate([{boxShadow:'0 0 0 0 #ffe11b00'},{boxShadow:'0 0 0 6px #ffe11b99'},{boxShadow:'0 0 0 0 #ffe11b00'}],{duration:500});
+  if(result.phaseStarted){showFeedback('Últimos 5 s','time',1000);return;}
+  if(!result.correct){sound.miss();showFeedback('Ese ya está listo · racha reiniciada','wrong',950);return;}
+  if(result.completed){
+    sound.combo();showFeedback(`Recarga completa · +${result.bonus}`,'complete',1050);
+    const strip=$('mission-card');
+    if(strip.animate&&!reducedMotion)strip.animate([{opacity:.72},{opacity:1}],{duration:280});
+  }else sound.collect(result.multiplier);
 }
+function showFeedback(text,kind,duration){
+  clearTimeout(feedbackTimer);const node=$('combo-feedback');
+  node.textContent=text;node.dataset.kind=kind;node.hidden=false;
+  feedbackTimer=setTimeout(()=>{node.hidden=true;},duration);
+}
+// AVISO SONORO: una señal por segundo al final; se detiene en las pausas.
+function updateGameSound(){
+  if(state!=='game'||!session?.tracked||document.hidden||!$('countdown').hidden)return;
+  const second=Number($('game-timer').textContent);
+  if(second===lastSoundSecond)return;lastSoundSecond=second;
+  if(second>0&&second<=5)sound.countdown();
+}
+function updateSoundButton(){
+  $('sound-toggle').setAttribute('aria-pressed',String(!sound.muted));
+  $('sound-toggle').title=sound.muted?'Activar sonido':'Silenciar sonido';
+}
+$('sound-toggle').addEventListener('click',()=>{sound.toggle();updateSoundButton();});
+updateSoundButton();
 // TOP 10: textos y filas. Los colores del podio están en colores.css.
 function renderRanking(data) {
   renderRankingPreview(data);

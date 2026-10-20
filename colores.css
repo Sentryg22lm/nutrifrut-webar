@@ -99,3 +99,9 @@
    Grosor y cantidad de partículas: battery-contour.js.
    Posición respecto del impreso: target-layout.js (no mover para cambiar colores).
 */
+
+/* BLOQUE 11 — FRANJA DE COMBOS: fondo y cantidades pendientes. */
+:root {
+  --nf-franja-fondo: var(--nf-rojo);
+  --nf-franja-acento: var(--nf-amarillo);
+}

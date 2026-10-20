@@ -114,3 +114,16 @@ Pruebas: relleno y tramos del borde al 5/25/50/75/100 %; alineación del interio
 El motor MindAR configura una cámara con plano cercano de 10 unidades. La revelación centrada se estaba colocando a una distancia menor y quedaba recortada, aunque su tiempo de animación sí se ejecutaba. `centered-reveal.js` ahora aumenta la distancia y la escala del conjunto en la misma proporción, según el plano cercano real. La explosión se conserva centrada, con el mismo tamaño aparente, antes de pasar al producto grande y al ranking.
 
 Se comprobó la proyección de las mallas de ingredientes durante agrupación, explosión y órbita con planos cercanos de 0,01, 10 y 100, cámaras giradas y tamaños verticales/horizontales. También se verificó el flujo de 30 segundos → revelación visible → cierre con la configuración de cámara de MindAR. La comprobación visual final debe realizarse en teléfono.
+
+
+## Franja de energía y sonidos
+
+El panel blanco de combinaciones se reemplazó por una franja roja con extremos diagonales. Se mantienen el logo, puntaje, reloj y carga superior. Las cantidades indican lo pendiente con ×1, ×2, etc.; un ingrediente completo se atenúa y dice Listo. Las confirmaciones y errores se muestran durante aproximadamente un segundo, fuera de la franja. Se retiraron los mensajes permanentes y la barra inferior de la partida. En modo práctica se mantiene una etiqueta pequeña para aclarar que el resultado no participa en el ranking.
+
+`energy-strip.css` contiene los tamaños, cortes diagonales y distribución de los combos. Los colores se editan en el BLOQUE 11 de `colores.css`. `burst-app.js` contiene comentarios COMBOS y AVISO SONORO para ubicar los contadores, avisos y sonidos.
+
+`experience-audio.js` genera sonidos originales mediante Web Audio, sin descargar archivos, solicitar micrófono ni añadir música en bucle. Hay señales distintas para inicio, acierto, error, combinación completa, últimos cinco segundos y la revelación: carga inicial, explosión a los 650 ms y acorde al aparecer el empaque. El sonido se habilita desde el toque en Iniciar juego. El control de altavoz, visible durante juego y revelación, permite silenciar; se conserva la preferencia en ese navegador. Perder el target, salir o esconder la pestaña cancela los sonidos pendientes. Si Web Audio no está disponible, el juego sigue funcionando.
+
+VOLUMEN GENERAL: `masterVolume=.22` en `experience-audio.js`. Las duraciones, notas y niveles de cada efecto están comentados en ese módulo. Se limitan las voces simultáneas y se usa un compresor para evitar acumulaciones fuertes. El volumen percibido depende también del teléfono.
+
+Verificación de esta actualización: desbloqueo por interacción, secuencia válida de nodos, envolventes y duración de efectos, silencio inmediato y persistente, pausas y fallo o ausencia de audio. Flujo simulado completo con contadores compactos, avisos temporales, combinaciones, 30 segundos activos, cinco señales finales, explosión centrada visible con near=10, resultado, ranking resumido y guardado sin duplicación. No se modificaron reglas de puntaje, base de datos ni autenticación. La composición visual y el volumen final deben verificarse en teléfono real.
