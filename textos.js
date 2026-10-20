@@ -9,7 +9,7 @@
 export const TEXTOS={
   // CTA FINAL: aparece sobre el producto y en el cierre de la revelación
   cierre:{
-    titulo:'Tu próxima pausa empieza aquí.',
+    titulo:'NO SUFRAS DE HAMBRE',
     botonCompra:'Adquiere Nutrifruit',
     enlaceTienda:'https://boliviasfruit.com/categoria-producto/frutosdeshidratados/',
     tituloFormulario:'Tu nombre en el ranking',
