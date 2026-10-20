@@ -1,0 +1,71 @@
+/* INICIO DIRECTO: tamaño del panel y del botón bajo la cámara. */
+.balanced-experience .scan-bottom { padding:14px; max-width:420px; }
+.balanced-experience .scan-message img { width:40px; height:40px; }
+.balanced-experience .scan-message p { font-size:16px; }
+.balanced-experience .scan-message span { font-size:12px; }
+.balanced-experience .scan-bottom>.button { margin-top:12px; min-height:48px; }
+
+/* CIERRE: producto, tienda y ranking ocupan filas separadas, sin superposición.
+   COLORES: siguen en colores.css. ALTURA DEL PRODUCTO: cambia height abajo. */
+.balanced-experience .clean-result {
+  background:var(--nf-blanco); pointer-events:auto; justify-content:flex-start;
+  gap:10px; overflow-y:auto; overflow-x:hidden;
+  padding:calc(12px + env(safe-area-inset-top)) 18px calc(16px + env(safe-area-inset-bottom));
+}
+.balanced-experience .clean-result>.masthead { min-height:34px; padding:0; }
+.balanced-experience .clean-result>.masthead .manufacturer-logo { width:108px; }
+.balanced-experience .clean-result .result-title { margin:0; max-width:360px; }
+.balanced-experience .clean-result .result-title #result-line {
+  margin:0; font-size:clamp(23px,6vw,29px); line-height:1.1; letter-spacing:-.4px;
+}
+.balanced-experience #product-stage {
+  position:relative; inset:auto; z-index:auto; flex:0 0 auto;
+  width:calc(100% + 24px); max-width:520px; height:clamp(300px,43svh,430px);
+  align-self:center;
+  margin:0 -12px; overflow:hidden; border-radius:24px; pointer-events:auto;
+  background:radial-gradient(ellipse at center,var(--nf-blanco) 45%,color-mix(in srgb,var(--nf-amarillo) 12%,var(--nf-blanco)) 100%);
+}
+.balanced-experience #product-stage canvas { width:100%; height:100%; display:block; }
+.balanced-experience .clean-result .result-bottom {
+  padding-top:0; margin:0 auto; width:100%; max-width:400px; flex-shrink:0;
+}
+.balanced-experience .clean-result .purchase-link {
+  min-height:51px; padding:12px 16px; font-size:18px;
+}
+.balanced-experience .clean-result .result-score { margin:10px 0; }
+.balanced-experience .clean-result .save-form { padding:12px; margin:10px 0; }
+.balanced-experience .alias-heading { flex-wrap:wrap; gap:4px; }
+.balanced-experience .alias-heading label { margin:0; font-size:14px; }
+.balanced-experience .save-row {
+  display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px;
+}
+.balanced-experience #nickname { width:100%; min-width:0; }
+.balanced-experience #save-score { font-size:12px; padding:10px; }
+.balanced-experience .competition-button { min-height:62px; margin-top:10px; }
+.balanced-experience #play-again { margin-top:8px; }
+@media(max-height:600px) {
+  .balanced-experience #product-stage { height:280px; }
+}
+@media(min-width:700px) {
+  .balanced-experience #product-stage { height:400px; }
+}
+
+/* RANKING RESUMIDO: tamaño de filas, puntos y enlace Ver más. */
+.balanced-experience .ranking-preview {
+  margin-top:14px; border:1px solid var(--nf-form-borde); border-radius:16px;
+  overflow:hidden; text-align:left; background:var(--nf-blanco);
+}
+.ranking-preview h3 { margin:0; padding:10px 14px; font-size:17px; font-weight:900;
+  color:var(--nf-top-texto); background:var(--nf-top-fondo); }
+.ranking-preview ol { list-style:none; padding:0 12px; margin:0; }
+.preview-row { display:flex; gap:10px; align-items:center; padding:10px 0;
+  border-bottom:1px solid var(--nf-form-borde); font-size:13px; }
+.preview-row:last-child { border-bottom:0; }
+.preview-row strong { white-space:nowrap; font-size:12px; color:var(--nf-rojo); }
+.preview-position { display:grid; place-items:center; width:24px; height:24px;
+  border-radius:50%; background:var(--nf-podio-fondo); color:var(--nf-rojo-oscuro); font-weight:900; }
+.preview-name { flex:1; min-width:0; overflow-wrap:anywhere; font-weight:800; }
+.ranking-preview .own-row { background:var(--nf-mi-fila); }
+.balanced-experience .clean-result #ranking-preview-status { margin:0; padding:12px 14px; font-size:12px; }
+.balanced-experience .ranking-more { display:block; width:100%; min-height:44px;
+  color:var(--nf-rojo-oscuro); text-decoration:underline; font-size:13px; }

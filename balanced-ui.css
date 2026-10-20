@@ -1,0 +1,168 @@
+/* TIPOGRAFÍA Y RESULTADO. Colores editables en colores.css. */
+@font-face {
+  font-family:'Nunito';
+  font-style:normal;
+  font-weight:200 1000;
+  font-display:swap;
+  src:url('./assets/fonts/Nunito-Variable.ttf') format('truetype')}
+
+.balanced-experience {
+  font-family:'Nunito',Arial,sans-serif}
+.balanced-experience button,.balanced-experience input {
+  font-family:inherit}
+
+.balanced-experience .camera-intro h1 {
+  font-weight:900;
+  letter-spacing:-.7px}
+.balanced-experience .eyebrow {
+  letter-spacing:1px}
+
+.balanced-experience .journey-choice span {
+  font-size:12px;
+  font-weight:800}
+.balanced-experience .mission-card {
+  font-weight:600}
+
+.balanced-experience .need-item strong,.balanced-experience .need-item span {
+  font-size:11px}
+.balanced-experience .game-top p strong {
+  font-weight:900;
+  letter-spacing:0}
+
+.balanced-experience .reveal-caption p {
+  font-weight:900;
+  letter-spacing:-.3px}
+
+.balanced-experience .clean-result {
+  justify-content:space-between;
+  overflow-y:auto;
+  gap:0;
+  padding:calc(20px + env(safe-area-inset-top)) 24px calc(18px + env(safe-area-inset-bottom))}
+
+.balanced-experience .clean-result>.masthead {
+  justify-content:center;
+  min-height:50px;
+  flex-shrink:0}
+
+.balanced-experience .clean-result>.masthead .manufacturer-logo {
+  width:154px}
+
+.balanced-experience .clean-result .result-title {
+  max-width:360px;
+  align-self:center;
+  margin:18px 0 0;
+  flex-shrink:0}
+
+.balanced-experience .clean-result .result-title #result-line {
+  font-size:clamp(29px,7.7vw,40px);
+  font-weight:900;
+  line-height:1.08;
+  letter-spacing:-.6px;
+  margin:0;
+  max-width:360px;
+  color:var(--nf-rojo)}
+
+.balanced-experience .clean-result .result-bottom {
+  max-width:400px;
+  margin:0 auto;
+  padding-top:max(185px,26svh);
+  flex-shrink:0}
+
+.balanced-experience .clean-result .purchase-link {
+  font-weight:900;
+  font-size:19px;
+  padding:16px 20px;
+  min-height:59px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  border-radius:16px}
+
+.balanced-experience .clean-result .purchase-link span {
+  font-size:22px;
+  font-weight:600}
+
+.balanced-experience .clean-result .result-score {
+  display:block;
+  margin:14px 0 0;
+  font-size:12px;
+  color:var(--nf-texto-suave);
+  letter-spacing:0;
+  font-weight:600}
+
+.balanced-experience .clean-result .result-score strong {
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:0;
+  color:var(--nf-texto-suave)}
+
+.balanced-experience .clean-result #play-again {
+  font-size:12px;
+  font-weight:700;
+  color:var(--nf-rojo-oscuro);
+  text-decoration:underline;
+  padding:11px 16px;
+  min-height:42px}
+
+@media(max-height:650px) {
+  .balanced-experience .clean-result {
+  padding-top:calc(12px + env(safe-area-inset-top));
+  padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+.balanced-experience .clean-result>.masthead .manufacturer-logo {
+  width:128px}
+.balanced-experience .clean-result .result-title {
+  margin-top:12px;
+  max-width:320px}
+.balanced-experience .clean-result .result-title #result-line {
+  font-size:29px;
+  max-width:320px}
+.balanced-experience .clean-result .result-bottom {
+  padding-top:155px}
+.balanced-experience .clean-result .purchase-link {
+  min-height:53px;
+  padding:13px 18px;
+  font-size:18px}
+}
+
+@media(max-width:360px) {
+  .balanced-experience .need-item strong,.balanced-experience .need-item span {
+  font-size:9px}
+.balanced-experience .clean-result .result-title #result-line {
+  font-size:28px}
+}
+
+
+.balanced-experience .rank-actions {
+  display:flex;
+  justify-content:center;
+  gap:4px;
+  pointer-events:auto;
+  margin-top:3px}
+.balanced-experience .rank-actions .text-button {
+  font-size:12px;
+  min-height:42px;
+  text-decoration:underline;
+  padding:10px 12px}
+
+.balanced-experience .clean-result .save-form {
+  margin:8px 0;
+  background:var(--nf-blanco);
+  border:1px solid color-mix(in srgb, var(--nf-rojo) 16%, transparent)}
+.balanced-experience .clean-result .save-status {
+  font-size:12px;
+  line-height:1.4;
+  margin:9px 0 0;
+  min-height:0}
+
+.balanced-experience .ranking-panel {
+  z-index:30}
+.balanced-experience .ranking-card h2 {
+  font-weight:900}
+.balanced-experience .ranking-card table {
+  font-weight:600}
+
+.balanced-experience .clean-result #play-again {
+  padding-top:7px;
+  padding-bottom:7px}
+

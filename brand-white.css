@@ -1,0 +1,227 @@
+/* IDENTIDAD Y LOGOS. Paleta editable en colores.css;
+   imágenes originales en assets/marca. */
+.brand-white {
+  --cream:var(--nf-blanco);
+  --red:var(--nf-rojo);
+  --orange:var(--nf-rojo);
+  --yellow:var(--nf-amarillo);
+  --green:var(--nf-rojo-oscuro);
+  background:var(--nf-blanco);
+  color:var(--nf-texto)}
+
+.brand-white .intro {
+  background:var(--nf-blanco)}
+.brand-white #product-stage {
+  background:var(--nf-blanco)}
+
+.brand-white .eyebrow,.brand-white .camera-intro h1,.brand-white .result-title h2,.brand-white .result-title #result-line {
+  color:var(--red)}
+
+.brand-lockup {
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:4px;
+  flex-shrink:0;
+  background:color-mix(in srgb, var(--nf-blanco) 93%, transparent);
+  border-radius:12px;
+  padding:7px 9px;
+  max-width:61%}
+
+.manufacturer-logo {
+  display:block;
+  width:165px;
+  height:auto;
+  max-width:100%;
+  object-fit:contain}
+.product-brand {
+  font-size:11px;
+  font-weight:900;
+  color:var(--nf-rojo);
+  letter-spacing:.3px;
+  line-height:1}
+
+.brand-white .masthead,.brand-white .scan-top,.brand-white .reveal-ui>header {
+  align-items:center;
+  gap:14px;
+  text-shadow:none;
+  color:var(--nf-texto)}
+
+.brand-white .tag {
+  font-size:9px;
+  color:var(--nf-rojo-oscuro);
+  max-width:125px;
+  line-height:1.5;
+  text-shadow:none}
+
+.brand-white .reveal-ui>header .tag {
+  padding:8px 10px;
+  border-radius:10px;
+  background:color-mix(in srgb, var(--nf-blanco) 94%, transparent)}
+
+.brand-white .button.primary,.brand-white .purchase-link {
+  background:var(--nf-rojo);
+  color:var(--nf-blanco);
+  box-shadow:0 3px 0 var(--nf-rojo-sombra);
+  border:0}
+
+.brand-white .button.primary:hover,.brand-white .purchase-link:hover {
+  background:var(--nf-rojo-hover)}
+
+.brand-white .button.primary:active,.brand-white .purchase-link:active {
+  box-shadow:0 1px 0 var(--nf-rojo-sombra);
+  transform:translateY(2px)}
+
+.brand-white .small-button {
+  background:var(--nf-blanco);
+  color:var(--nf-rojo);
+  border:1px solid color-mix(in srgb, var(--nf-rojo) 25%, transparent);
+  box-shadow:0 2px 10px #00000012}
+
+.brand-white .scan-bottom {
+  background:var(--nf-blanco);
+  border-top:3px solid var(--nf-rojo);
+  box-shadow:0 8px 32px #00000020;
+  color:var(--nf-texto)}
+
+.brand-white .scan-frame {
+  border-color:var(--nf-rojo);
+  box-shadow:0 0 0 100vmax color-mix(in srgb, var(--nf-blanco) 7%, transparent)}
+
+.brand-white .journey-message {
+  color:var(--nf-rojo)}
+.brand-white .journey-choice {
+  background:var(--nf-blanco);
+  color:var(--nf-rojo-oscuro);
+  border-color:color-mix(in srgb, var(--nf-rojo) 16%, transparent)}
+
+.brand-white .journey-choice[aria-pressed="true"] {
+  background:var(--nf-blanco);
+  border-color:var(--nf-rojo);
+  box-shadow:inset 0 -4px 0 var(--nf-amarillo)}
+
+.brand-white .game-ui {
+  color:var(--nf-texto)}
+.brand-white .game-top {
+  background:color-mix(in srgb, var(--nf-blanco) 96%, transparent);
+  color:var(--nf-texto);
+  border:1px solid color-mix(in srgb, var(--nf-rojo) 12%, transparent);
+  box-shadow:0 4px 20px #00000020}
+
+.game-brand {
+  display:flex;
+  align-items:center;
+  gap:6px}
+.game-brand>img {
+  width:24px;
+  height:24px;
+  object-fit:contain}
+
+.brand-white .game-top p strong,.brand-white .game-clock strong {
+  color:var(--nf-rojo)}
+.brand-white .game-clock span {
+  color:var(--nf-texto-suave)}
+
+.brand-white .energy-track {
+  background:var(--nf-blanco);
+  border:1px solid color-mix(in srgb, var(--nf-rojo) 19%, transparent);
+  box-shadow:0 2px 10px #00000012}
+.brand-white .energy-track>div {
+  background:var(--nf-rojo)}
+
+.brand-white .mission-card {
+  background:color-mix(in srgb, var(--nf-blanco) 96%, transparent);
+  color:var(--nf-texto);
+  border:1px solid color-mix(in srgb, var(--nf-rojo) 16%, transparent);
+  box-shadow:0 4px 16px #00000016}
+
+.brand-white .mission-heading>strong:first-child {
+  color:var(--nf-rojo)}
+.brand-white .mission-heading>strong:last-child {
+  background:var(--nf-amarillo);
+  color:#6a2328}
+
+.brand-white .need-item {
+  background:var(--nf-blanco);
+  border-color:color-mix(in srgb, var(--nf-rojo) 16%, transparent)}
+.brand-white .need-done {
+  background:var(--nf-blanco);
+  border-color:color-mix(in srgb, var(--nf-rojo) 38%, transparent);
+  box-shadow:inset 0 -3px 0 var(--nf-amarillo);
+  opacity:.65}
+
+.brand-white .journey-game-message,.brand-white .game-footer {
+  background:color-mix(in srgb, var(--nf-blanco) 94%, transparent);
+  color:var(--nf-rojo-oscuro);
+  border:1px solid color-mix(in srgb, var(--nf-rojo) 12%, transparent);
+  box-shadow:0 2px 12px #00000012}
+
+.brand-white .game-ui.final-phase .mission-card {
+  background:var(--nf-blanco);
+  border:1px solid color-mix(in srgb, var(--nf-rojo) 22%, transparent);
+  border-top:4px solid var(--nf-amarillo)}
+
+.brand-white .game-ui.final-phase .game-clock strong {
+  color:var(--nf-rojo);
+  text-shadow:none}
+
+.brand-white .tracking-pause,.brand-white .countdown {
+  background:color-mix(in srgb, var(--nf-blanco) 52%, transparent);
+  color:var(--nf-rojo-oscuro);
+  text-shadow:none}
+
+.brand-white .tracking-pause>div {
+  background:var(--nf-blanco);
+  border:1px solid color-mix(in srgb, var(--nf-rojo) 19%, transparent);
+  color:var(--nf-texto)}
+
+.brand-white .tracking-pause h2,.brand-white .countdown>strong {
+  color:var(--nf-rojo)}
+
+.brand-white .reveal-caption {
+  background:color-mix(in srgb, var(--nf-blanco) 96%, transparent);
+  color:var(--nf-rojo);
+  border:1px solid color-mix(in srgb, var(--nf-rojo) 16%, transparent);
+  box-shadow:0 7px 26px #00000020}
+
+.brand-white .result-score strong {
+  color:var(--nf-rojo)}
+.brand-white .model-hint,.brand-white .test-notice,.brand-white .purchase-block p {
+  color:var(--nf-texto-suave)}
+
+.brand-white.combo-test .result-actions .button {
+  background:var(--nf-blanco);
+  border:1px solid color-mix(in srgb, var(--nf-rojo) 27%, transparent);
+  color:var(--nf-rojo);
+  box-shadow:none}
+
+.brand-white .text-button {
+  color:var(--nf-rojo-oscuro)}
+.brand-white .ranking-panel,.brand-white .error-panel {
+  background:var(--nf-blanco);
+  color:var(--nf-texto)}
+
+.brand-white .error-panel h2,.brand-white .ranking-card h2 {
+  color:var(--nf-rojo)}
+
+@media(max-width:360px) {
+  .manufacturer-logo {
+  width:138px}
+.brand-white .tag {
+  font-size:8px;
+  max-width:110px}
+.brand-lockup {
+  padding:6px 7px}
+}
+
+@media(max-height:720px) {
+  .brand-white .result-ui>.masthead .manufacturer-logo {
+  width:140px}
+.brand-white .result-ui>.masthead .product-brand {
+  font-size:10px}
+.brand-white .result-ui>.masthead .brand-lockup {
+  padding:4px 7px}
+.brand-white .result-title {
+  margin-top:10px}
+}
+
