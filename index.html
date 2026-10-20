@@ -4,14 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#ffffff">
-  <meta name="nf-release" content="final-rays-20261020-4">
-  <meta name="description" content="Escanea el afiche, arma combinaciones en 30 segundos y descubre tu recarga Nutrifruit.">
+  <meta name="nf-release" content="rain-v5-record-20261020-7">
+  <meta name="description" content="Atrapa ingredientes en 35 segundos, encadena tres iguales y descubre tu recarga Nutrifruit.">
   <title>Nutrifruit · Escanea, juega y recárgate</title>
   <link rel="stylesheet" href="./style.css?v=8"><link rel="stylesheet" href="./combo.css?test=1"><link rel="stylesheet" href="./journey.css?journey=1"><link rel="stylesheet" href="./brand-white.css?brand=1"><link rel="stylesheet" href="./balanced-ui.css?rank=3">
   <!-- COLORES: edita colores.css. Se carga al final para controlar el tema. -->
   <link rel="stylesheet" href="./colores.css?v=3">
   <link rel="stylesheet" href="./experience-clean.css?v=2">
   <link rel="stylesheet" href="./energy-strip.css?v=2">
+  <link rel="stylesheet" href="./rain-ui.css?v=1">
   <link rel="icon" type="image/webp" href="./assets/marca/simbolo.webp?brand=1">
 </head>
 <body class="combo-test journey-test brand-white balanced-experience">
@@ -27,7 +28,7 @@
     <section class="camera-intro">
       <span class="eyebrow">ESCANEA Y RECÁRGATE</span>
       <h1>Permite la cámara<br>y apunta al afiche</h1>
-      <p>Atrapa ingredientes, enciende los rayos y compite por el top 10</p>
+      <p>Avena 10 · Cereal 20 · Frutos rojos 30 puntos<br>Tres iguales seguidos activan un combo</p>
       <button id="start" class="button primary" hidden disabled>Permitir cámara</button>
       <button id="intro-ranking" class="text-button">Ver top 10</button>
       <p id="intro-note" class="note" role="status">Preparando el acceso a la cámara…</p>
@@ -41,22 +42,13 @@
     <div id="scan-frame" class="scan-frame" aria-hidden="true"></div>
     <div class="scan-bottom">
       <div class="scan-message"><img src="./assets/afiche-final-guia.png?final=1" alt="Afiche que debes enfocar"><div><p id="scan-heading">Apunta al afiche</p><span id="scan-status" role="status" aria-live="polite">Encuadra el diseño completo.</span></div></div>
-      <button id="start-game" class="button primary" hidden disabled>Iniciar juego · 30 s</button>
+      <button id="start-game" class="button primary" hidden disabled>Iniciar juego · 35 s</button>
     </div>
   </section>
   <!-- PANTALLA 3: puntos, reloj, batería y combinaciones. -->
-  <section id="game-ui" class="game-ui" hidden aria-label="Arma tu recarga, juego de 30 segundos">
-    <header class="game-top"><div><span class="game-brand"><img src="./assets/marca/simbolo.webp" alt="" aria-hidden="true"><span class="eyebrow">TU RECARGA</span></span><p><strong id="game-score">0</strong> <span>puntos</span></p></div><div class="game-clock"><strong id="game-timer">30</strong><span>segundos</span></div><button id="exit-game" class="small-button">Salir</button></header>
+  <section id="game-ui" class="game-ui" hidden aria-label="Arma tu recarga, juego de 35 segundos">
+    <header class="game-top"><div><span class="game-brand"><img src="./assets/marca/simbolo.webp" alt="" aria-hidden="true"><span class="eyebrow">TU RECARGA</span></span><p><strong id="game-score">0</strong> <span>puntos</span></p></div><div class="game-clock"><strong id="game-timer">35</strong><span>segundos</span></div><button id="exit-game" class="small-button">Salir</button></header>
     <div class="energy-track" role="progressbar" aria-label="Carga de la batería" aria-valuemin="5" aria-valuemax="100" aria-valuenow="5" id="energy-track"><div id="energy-fill"></div></div>
-    <p class="game-instruction">Toca solo lo que falta en tu combinación.</p>
-    <div id="mission-card" class="mission-card">
-      <div class="mission-heading"><strong id="combo-number">Recarga 1</strong><span id="combo-count">0 completadas</span><strong id="combo-multiplier">×1</strong></div>
-      <div class="need-list">
-        <div id="need-0" class="need-item"><img src="./assets/avena.svg" alt=""><div><strong>Avena</strong><span id="need-count-0">×2</span></div></div>
-        <div id="need-1" class="need-item"><img src="./assets/frutos-rojos.svg" alt=""><div><strong>Frutos rojos</strong><span id="need-count-1">×1</span></div></div>
-        <div id="need-2" class="need-item" hidden><img src="./assets/cereal.svg" alt=""><div><strong>Cereal</strong><span id="need-count-2"></span></div></div>
-      </div>
-    </div>
     <p id="combo-feedback" role="status" aria-live="polite" hidden></p><div id="game-field" class="game-field" aria-label="Lluvia de ingredientes"></div>
     <span id="game-mode" role="status" hidden></span>
     <div id="tracking-pause" class="tracking-pause" hidden role="status" aria-live="polite"><div><span class="eyebrow">PARTIDA EN PAUSA</span><h2>Vuelve a enfocar el afiche</h2><p>Tu tiempo y tus puntos se conservan. El juego continúa al reconocerlo de nuevo.</p></div></div>
@@ -98,11 +90,11 @@
   </section>
   <!-- TABLA TOP 10: las tres primeras posiciones tienen color de podio. -->
   <section id="ranking-panel" class="ranking-panel" hidden role="dialog" aria-modal="true" aria-labelledby="ranking-title">
-    <div class="ranking-card"><header><div><span class="eyebrow">ESCANEA Y RECÁRGATE</span><h2 id="ranking-title">Top 10 · La mejor recarga</h2></div><button id="close-ranking" class="close-button" aria-label="Cerrar ranking">Cerrar</button></header><p class="rank-description">Sube tu marca y conquista el primer puesto.</p><p id="ranking-message" role="status">Cargando ranking…</p><p id="my-ranking" class="my-ranking" hidden></p><table id="ranking-table" hidden><thead><tr><th scope="col">Posición</th><th scope="col">Nombre</th><th scope="col">Puntos</th></tr></thead><tbody id="ranking-rows"></tbody></table><button id="refresh-ranking" class="button outline">Actualizar ranking</button></div>
+    <div class="ranking-card"><header><div><span class="eyebrow">ESCANEA Y RECÁRGATE</span><h2 id="ranking-title">Top 10 · Récords de recarga</h2></div><button id="close-ranking" class="close-button" aria-label="Cerrar ranking">Cerrar</button></header><p class="rank-description">Supera tu récord · conquista el primer puesto</p><p id="ranking-message" role="status">Cargando ranking…</p><p id="my-ranking" class="my-ranking" hidden></p><table id="ranking-table" hidden><thead><tr><th scope="col">Posición</th><th scope="col">Nombre</th><th scope="col">Puntos</th></tr></thead><tbody id="ranking-rows"></tbody></table><button id="refresh-ranking" class="button outline">Actualizar ranking</button></div>
   </section>
   <section id="error-panel" class="error-panel" hidden role="alert"><div><span class="eyebrow">NO SE PUDO INICIAR</span><h2 id="error-title">Revisa el acceso a la cámara</h2><p id="error-message"></p><p id="error-detail" class="note"></p><button id="retry" class="button primary">Volver al inicio</button></div></section>
   <script type="module">
-    import('./burst-app.js?final=4').catch(()=>{const button=document.querySelector('#start');button.textContent='Recargar página';button.hidden=false;button.disabled=false;button.onclick=()=>location.reload();document.querySelector('#intro-note').textContent='No se completó la carga. Comprueba tu conexión y vuelve a intentarlo.';});
+    import('./burst-app.js?record=7').catch(()=>{const button=document.querySelector('#start');button.textContent='Recargar página';button.hidden=false;button.disabled=false;button.onclick=()=>location.reload();document.querySelector('#intro-note').textContent='No se completó la carga. Comprueba tu conexión y vuelve a intentarlo.';});
   </script>
 </body>
 </html>

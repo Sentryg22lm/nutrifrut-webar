@@ -1,8 +1,8 @@
 import { openCamera } from './camera.js?v=2';
 import { CONFIG } from './config-current.js?rank=1';
 import { ranking } from './ranking-current.js?rank=1';
-import { COMBO_RULES as RULES } from './balanced-rules.js?timing=2';
-import { playRound } from './balanced-play.js?timing=2';
+import { COMBO_RULES as RULES } from './rain-rules.js?v=3';
+import { playRound } from './rain-play.js?v=3';
 import { nicknameError, normalizeNickname, NICKNAME_MAX } from './nickname-policy.js?v=2';
 import {createGameEnergy} from './game-energy.js?v=3';
 import {createRevealPortal} from './reveal-portal.js?v=1';
@@ -21,7 +21,7 @@ let enginePromise = null, product = null, THREE = null, MindARThree = null, Orbi
 let targetVerified=false, game=null, gameOperation=0, lastRound=null, resultVersion=0, rankingOperation=0, rankFocus=null,previewOperation=0;
 let revealFrame=0,revealFinish=null,activeBurst=null,burstOrigin=0;
 const sound=createExperienceAudio();
-let feedbackTimer=0,lastSoundSecond=30;
+let feedbackTimer=0,lastSoundSecond=RULES.durationMs/1000;
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function screen(next) {
@@ -84,7 +84,7 @@ async function loadEngine() {
         import('./vendor/OrbitControls.js'),
         import('./model.js'),
         import('./battery-contour.js?v=3'),
-        import('./combo-surface.js?motion=3'),
+        import('./combo-surface.js?rain=5'),
       ]);
       THREE = three; MindARThree = ar.MindARThree; OrbitControls = controls.OrbitControls; makeRecharge=scene.createBatteryContour;makeARGame=arGame.createIngredientSurface;
       product = product || await model.createPackaging();
@@ -226,7 +226,7 @@ async function attachTracking(run) {
       if(!run.seen){run.energy.open();run.recharge.open();}run.seen = true;run.tracked=true; targetVerified=true; clearTimeout(run.hintTimer);
       $('scan-frame').hidden = true;
       $('scan-heading').textContent = 'Tu recarga comienza aquí';
-      $('scan-status').textContent = 'Arma la combinación que aparece arriba. Toca solo lo que falta. Tienes 30 segundos.';
+      $('scan-status').textContent = 'Atrapa ingredientes · 3 iguales seguidos activan un combo';
       $('start-game').hidden = false;
       renderScanState();syncTrackingPause();
     };
@@ -276,6 +276,7 @@ function showProduct() {
   activeBurst?.group.removeFromParent();
   ++operation; disposeRun(session); screen('product');
   $('result-ui').scrollTop=0;loadRankingPreview();
+  if(lastRound?.autoSave&&!lastRound.saved){lastRound.autoSave=false;void saveScore({preventDefault(){}});}
   try {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(38,1,.01,2000);
@@ -378,16 +379,16 @@ function syncTrackingPause() {
   const paused=!session?.tracked||document.hidden;
   $('tracking-pause').hidden=!paused;game?.setPaused(paused);sound.setPaused(paused);
 }
-// JUEGO: conecta la partida al ranking antes de iniciar los 30 segundos.
+// JUEGO: conecta la partida al ranking antes de iniciar los 35 segundos.
 async function startGame() {
   const run=session;
   if(!targetVerified||state!=='scan'||!run?.tracked||!run.surface||document.hidden)return;
-  void sound.unlock();sound.setPaused(false);lastSoundSecond=30;clearTimeout(feedbackTimer);
+  void sound.unlock();sound.setPaused(false);lastSoundSecond=RULES.durationMs/1000;clearTimeout(feedbackTimer);
   const ticket=++gameOperation; ++resultVersion;
   closeRanking();stopViewer();game?.cancel();game=null;lastRound=null;
   $('game-ui').classList.remove('final-phase');$('combo-feedback').hidden=true;$('combo-feedback').textContent='';screen('game');$('game-field').replaceChildren();$('game-score').textContent='0';$('game-timer').textContent=String(RULES.durationMs/1000);$('energy-fill').style.width='5%';$('energy-track').setAttribute('aria-valuenow','5');
   run.recharge.setReveal(false);run.recharge.setCharge(5);run.energy.setCharge(5);syncTrackingPause();
-  $('countdown').hidden=false;$('countdown-label').textContent='PREPARANDO TU RECARGA';$('countdown-number').textContent='';$('countdown-note').textContent='Toca los ingredientes. Completa combinaciones para ganar bonos.';
+  $('countdown').hidden=false;$('countdown-label').textContent='PREPARANDO TU RECARGA';$('countdown-number').textContent='';$('countdown-note').textContent='Avena 10 · Cereal 20 · Frutos rojos 30 puntos. Tres iguales seguidos activan un combo.';
   let cloud=null,cloudError='';
   if(ranking.configured) {
     try{cloud=await withTimeout(ranking.startRun(),12000);if(typeof cloud.run_id!=='string'||!Number.isInteger(cloud.seed)||(cloud.duration_ms!==RULES.durationMs||cloud.rules_version!==RULES.version))throw new Error('La partida del ranking es inválida.');}
@@ -399,12 +400,12 @@ async function startGame() {
   if(cloudError)$('countdown-note').textContent='El ranking no está disponible. Puedes jugar una partida de práctica.';
   $('countdown').hidden=true;sound.start();
   const seed=cloud?.seed||Math.floor(Math.random()*2147483646)+1;
-  game=playRound({surface:run.surface,timer:$('game-timer'),score:$('game-score'),energy:$('energy-fill'),progress:$('energy-track'),seed,paused:!run.tracked||document.hidden,onCharge:percent=>{run.energy.setCharge(percent);},onMission:renderMission,onFeedback:showComboFeedback,onEnd:result=>{
+  game=playRound({surface:run.surface,timer:$('game-timer'),score:$('game-score'),energy:$('energy-fill'),progress:$('energy-track'),seed,paused:!run.tracked||document.hidden,onCharge:percent=>{run.energy.setCharge(percent);},onFeedback:showComboFeedback,onEnd:result=>{
     if(ticket!==gameOperation)return;
-    game=null;lastRound={...result,runId:cloud?.run_id||null,saved:false,cloudError};++resultVersion;
+    game=null;lastRound={...result,runId:cloud?.run_id||null,saved:false,autoSave:Boolean(cloud?.nickname),cloudError};++resultVersion;
     // RESULTADO: pide el alias automáticamente; no hace falta pulsar otro botón.
     $('show-score-form').hidden=true;$('show-score-form').disabled=false;
-    $('final-score').textContent=String(result.score);$('combo-result').textContent=`${result.completed} recargas completadas · mejor racha: ${result.bestStreak}`;
+    $('final-score').textContent=String(result.score);$('combo-result').textContent=`${result.completed} combos · racha de ${result.bestStreak} iguales`;
     $('result-line').textContent=TEXTOS.cierre.titulo;
     $('save-form').hidden=!lastRound.runId;$('save-score').disabled=!lastRound.runId;$('save-score').textContent='Guardar y competir';
     $('save-status').textContent=lastRound.runId?'':ranking.configured?'Esta partida fue de práctica y no participa en el ranking.':'El ranking no está disponible por ahora. Tu resultado es de práctica.';
@@ -412,7 +413,7 @@ async function startGame() {
     try{$('nickname').value=cloud?.nickname||localStorage.getItem('nutrifrut-nickname')||'';}catch{$('nickname').value=cloud?.nickname||'';}
     $('nickname').readOnly=Boolean(cloud?.nickname);
     if(!cloud?.nickname&&nicknameError($('nickname').value))$('nickname').value='';
-    $('nickname-help').textContent=cloud?.nickname?'Tu alias está registrado. Guardaremos tu mejor marca.':'3–12 caracteres. Tu alias quedará fijo y será público.';
+    $('nickname-help').textContent=cloud?.nickname?'Tu alias está registrado. Guardaremos tu récord si lo superas.':'3–12 caracteres. Tu alias quedará fijo y será público.';
     updateNicknameCounter();
     revealProduct(run,ticket);
   }});
@@ -424,30 +425,14 @@ function renderScanState(){
   $('start-game').disabled=!session?.tracked;
   if(session?.tracked){
     $('scan-heading').textContent='¡Afiche reconocido!';
-    $('scan-status').textContent='Toca los ingredientes que faltan y completa recargas en 30 segundos.';
+    $('scan-status').textContent='Atrapa ingredientes · 3 iguales seguidos activan un combo';
   }
 }
-function renderMission(mission){
-  $('combo-number').textContent='Recarga '+(mission.completed+1);
-  $('combo-multiplier').textContent='×'+mission.multiplier;
-  $('combo-count').textContent=mission.completed+' completadas';
-  $('game-ui').classList.toggle('final-phase',mission.finalPhase);
-  mission.needed.forEach((needed,i)=>{
-    const card=$('need-'+i),remaining=Math.max(0,needed-mission.filled[i]);
-    card.classList.toggle('need-done',remaining===0);card.hidden=needed===0;
-    $('need-count-'+i).textContent=remaining===0?'Listo':'×'+remaining;
-    card.setAttribute('aria-label',(['Avena','Frutos rojos','Cereal'][i])+': '+(remaining===0?'completo':remaining+' por recoger'));
-  });
-}
-// COMBOS: confirmaciones breves, sin mensajes permanentes sobre la cámara.
+// COMBO SIN PANEL: aviso breve solo al encadenar tres o más iguales.
 function showComboFeedback(result){
-  if(result.phaseStarted){showFeedback('Últimos 5 s','time',1000);return;}
-  if(!result.correct){sound.miss();clearTimeout(feedbackTimer);$('combo-feedback').hidden=true;return;}
-  if(result.completed){
-    sound.combo();showFeedback(`Recarga completa · +${result.bonus}`,'complete',1050);
-    const strip=$('mission-card');
-    if(strip.animate&&!reducedMotion)strip.animate([{opacity:.72},{opacity:1}],{duration:280});
-  }else sound.collect(result.multiplier);
+  if(result.phaseStarted){showFeedback('Últimos 5 s','time',850);return;}
+  if(result.bonus>0){sound.combo();showFeedback(`COMBO ${result.streak} · +${result.bonus}`,'complete',650);}
+  else sound.collect(result.multiplier);
 }
 function showFeedback(text,kind,duration){
   clearTimeout(feedbackTimer);const node=$('combo-feedback');
@@ -482,7 +467,7 @@ function renderRanking(data) {
   $('ranking-message').hidden=data.entries.length>0;
   $('ranking-message').textContent=data.entries.length?'':'Todavía no hay marcas. Guarda la primera.';
   $('my-ranking').hidden=!Number.isInteger(data.my_position);
-  if(Number.isInteger(data.my_position))$('my-ranking').textContent=`Tu posición: ${data.my_position} · Mejor marca: ${data.best_score} puntos`;
+  if(Number.isInteger(data.my_position))$('my-ranking').textContent=`Tu posición: ${data.my_position} · Récord: ${data.best_score} puntos`;
 }
 // RANKING EN EL CIERRE: tres puestos reales. «Ver más» abre los diez.
 function renderRankingPreview(data){
@@ -541,12 +526,12 @@ async function saveScore(event) {
   $('save-status').hidden=false;
   if(validation){$('save-status').textContent=validation;$('nickname').setAttribute('aria-invalid','true');$('nickname').focus();return;}
   $('nickname').setAttribute('aria-invalid','false');
-  $('save-score').disabled=true;$('save-score').textContent='Guardando…';$('save-status').textContent='Guardando tu mejor marca…';
+  $('save-score').disabled=true;$('save-score').textContent='Guardando…';$('save-status').textContent='Comprobando tu récord…';
   try{
     const data=await withTimeout(ranking.finishRun(round.runId,nickname,round.hits),15000);
     if(version!==resultVersion||round!==lastRound)return;
     if(data.score!==round.score||!data.saved)throw new Error('La puntuación no coincide.');
-    round.saved=true;$('show-score-form').hidden=true;$('save-form').hidden=true;$('save-status').textContent=`Resultado guardado. Tu mejor marca es ${data.best_score} puntos.`;
+    round.saved=true;$('show-score-form').hidden=true;$('save-form').hidden=true;$('save-status').textContent=`Partida: ${data.score} puntos · Tu récord: ${data.best_score} puntos.`;
     try{localStorage.setItem('nutrifrut-nickname',data.my_nickname||nickname);}catch{/* Optional preference. */}
     ++previewOperation;
     if(!$('ranking-panel').hidden){++rankingOperation;renderRanking(data);$('refresh-ranking').disabled=false;}

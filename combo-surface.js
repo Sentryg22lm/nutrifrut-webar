@@ -1,3 +1,4 @@
+import {ingredientPosition} from './rain-layout.js?v=1';
 import * as THREE from './vendor/three.module.js';
 
 // Game sprites fall in screen coordinates. The reveal stays attached to the poster.
@@ -6,7 +7,7 @@ export async function createIngredientSurface({anchor,camera,renderer,field,imag
   const group=new THREE.Group();anchor.add(group);
   const nodes=new Map(),center=new THREE.Vector3(),corner=new THREE.Vector3();
   const names=['Avena','Frutos rojos','Cereal'];
-  let needs=[2,1,0],collect=null,paused=true,disposed=false,revealFrame=0,revealing=false;
+  let needs=[1,1,1],collect=null,paused=true,disposed=false,revealFrame=0,revealing=false;
   function remove(id){const entry=nodes.get(id);if(!entry)return;group.remove(entry.point);entry.button.remove();nodes.delete(id);}
   function clear(){cancelAnimationFrame(revealFrame);for(const id of [...nodes.keys()])remove(id);field.replaceChildren();}
   function update(id,age){
@@ -16,10 +17,8 @@ export async function createIngredientSurface({anchor,camera,renderer,field,imag
     if(!revealing){
       const width=Math.max(60,Math.min(82,rect.width*.17));
       const progress=Math.max(0,Math.min(1,age/item.lifetimeMs));
-      const x=width/2+item.x*(rect.width-width)+Math.sin(progress*Math.PI*2+item.phase)*Math.min(15,width*.15)*item.sway;
-      const clampedX=Math.max(width/2,Math.min(rect.width-width/2,x));
-      const y=-width/2+progress*(rect.height+width);
-      button.style.left=rect.left+clampedX+'px';button.style.top=rect.top+y+'px';
+      const {x,y}=ingredientPosition(item,progress,rect.width,rect.height,width,reducedMotion);
+      button.style.left=rect.left+x+'px';button.style.top=rect.top+y+'px';
       button.style.width=width+'px';button.style.height=width+'px';
       button.style.opacity=String(Math.max(.25,Math.min(1,age/100,(item.lifetimeMs-age)/180)));
       button.style.transform=`translate(-50%,-50%) rotate(${reducedMotion?0:age/12*(item.sway||.1)}deg)`;
@@ -63,7 +62,7 @@ export async function createIngredientSurface({anchor,camera,renderer,field,imag
       // ERROR SIN TEXTO: solo un destello breve en el ingrediente pulsado.
       const popup=document.createElement('span');
       popup.className=feedback.correct?'point-popup':'ingredient-miss';
-      if(feedback.correct)popup.textContent='+'+feedback.points;
+      if(feedback.correct)popup.textContent='+'+(feedback.points+(feedback.bonus||0));
       else {popup.setAttribute('aria-hidden','true');popup.style.width=entry.button.style.width;popup.style.height=entry.button.style.height;}
       popup.style.left=entry.button.style.left;popup.style.top=entry.button.style.top;
       field.appendChild(popup);setTimeout(()=>popup.remove(),feedback.correct?550:240);remove(id);

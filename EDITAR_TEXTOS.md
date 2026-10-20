@@ -43,4 +43,4 @@ En `resultado.parcialTitulo`, conserva `{porcentaje}` para que aparezca la carga
 
 La experiencia principal abre `index.html`. `experiencia-3d.html` es una copia de esa entrada; si modificas el texto de bienvenida en el HTML y quieres mantener ambas entradas iguales, copia también ese cambio allí. Los cambios de `textos.js` se aplican automáticamente a ambas.
 
-Para cambiar una frase no hace falta editar JavaScript del juego ni Supabase. Los tiempos y las reglas están separados en `balanced-rules.js`: esos valores también los verifica el servidor y no deben cambiarse solo en la web.
+Para cambiar una frase no hace falta editar JavaScript del juego ni Supabase. Los tiempos y las reglas están separados en `rain-rules.js`: esos valores también los verifica el servidor y no deben cambiarse solo en la web.

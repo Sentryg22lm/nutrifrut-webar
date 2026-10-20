@@ -1,0 +1,8 @@
+/* LLUVIA LIBRE: cámara despejada, sin panel de recetas ni menú de combos */
+.balanced-experience #combo-feedback {
+  position:fixed; top:calc(118px + env(safe-area-inset-top)); left:50%;
+  transform:translateX(-50%); margin:0; padding:5px 11px;
+  font-size:12px; max-width:85vw; white-space:nowrap;
+  clip-path:polygon(5px 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%,0 5px);
+}
+.balanced-experience .ar-hit-target[data-needed="false"] { opacity:1; filter:none; }
